@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="股票記錄">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>股票記錄</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#1d2433; --sub:#6b7385; --line:#e4e7ec;
+  --accent:#1f3a5f; --accent2:#e8eef6;
+  --up:#d63a3a; --upbg:#fdecec; --down:#16935a; --downbg:#e7f6ee;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;font-size:15px}
+.app{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:20;background:var(--accent);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:18px;letter-spacing:.5px}
+.sync{font-size:11px;opacity:.75;margin-left:8px}
+.iconbtn{background:none;border:0;color:#fff;font-size:20px;padding:4px 6px;cursor:pointer}
+main{padding:14px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.seg{display:flex;background:#e9ecf1;border-radius:12px;padding:4px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;padding:10px 0;border-radius:9px;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer}
+.seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.seg.buy button.on[data-v=buy]{color:var(--up)}
+.seg.sell button.on[data-v=sell]{color:var(--down)}
+label.f{display:block;font-size:13px;color:var(--sub);margin:12px 0 6px}
+label.f:first-child{margin-top:0}
+input,textarea,select{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent2);border-color:var(--accent)}
+textarea{min-height:64px;resize:vertical}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.unit{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:0 0 96px}
+.unit button{flex:1;border:0;background:#fff;font-size:14px;color:var(--sub);cursor:pointer}
+.unit button.on{background:var(--accent);color:#fff}
+.suggest{position:relative}
+.sug-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;max-height:300px;overflow:auto}
+.sug-list div{padding:11px 12px;border-bottom:1px solid #f1f2f5;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.sug-list div:last-child{border-bottom:0}
+.sug-list div:active,.sug-list div:hover{background:var(--accent2)}
+.tag-m{font-size:11px;color:var(--sub);background:#f1f3f6;padding:2px 6px;border-radius:6px;white-space:nowrap}
+.picked{display:flex;align-items:center;justify-content:space-between;background:var(--accent2);border-radius:10px;padding:10px 12px;font-weight:600}
+.picked button{border:0;background:none;color:var(--sub);font-size:13px;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 13px;font-size:14px;color:var(--sub);cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.add{border-style:dashed;color:var(--accent)}
+.chip.edit{padding-right:6px}.chip.edit .x{display:inline-block;margin-left:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f1d6d6;color:var(--up);font-size:12px}
+.lblrow{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}.lblrow label.f{margin:0}
+.lnk{border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0}
+details.more{margin-top:12px}
+details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4px 0}
+.calc{background:#f8f9fb;border-radius:10px;padding:10px 12px;margin-top:14px;font-size:14px}
+.calc .l{display:flex;justify-content:space-between;padding:3px 0;color:var(--sub)}
+.calc .l b{color:var(--ink);font-weight:600}
+.calc .tot{border-top:1px dashed var(--line);margin-top:6px;padding-top:8px;font-size:16px}
+.btn{width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:700;color:#fff;background:var(--accent);margin-top:14px;cursor:pointer}
+.btn.buy{background:var(--up)}.btn.sell{background:var(--down)}
+.btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--line)}
+.btn:disabled{opacity:.4}
+.up{color:var(--up)}.down{color:var(--down)}
+.hold{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer}
+.hold.on{border-color:var(--down);background:var(--downbg)}
+.hold .t{display:flex;justify-content:space-between;font-weight:600}
+.hold .s{font-size:13px;color:var(--sub);margin-top:4px}
+.lot{font-size:13px;display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--line);color:var(--sub);gap:8px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:#fff;border-radius:12px;padding:12px}
+.stat .k{font-size:12px;color:var(--sub)}
+.stat .v{font-size:20px;font-weight:700;margin-top:4px}
+.stat .x{font-size:11px;color:var(--sub);margin-top:2px}
+.filters{display:flex;flex-direction:column;gap:8px}
+.item{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.item .h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.item .nm{font-weight:700}
+.item .meta{font-size:12px;color:var(--sub);margin-top:3px}
+.item .pl{font-weight:700;font-size:17px;text-align:right;white-space:nowrap}
+.item .pct{font-size:12px;text-align:right}
+.item .why{font-size:13px;margin-top:8px;background:#f8f9fb;border-radius:8px;padding:8px 10px;line-height:1.5}
+.item .why span{color:var(--sub)}
+.pill{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;margin-right:4px;font-weight:600}
+.pill.b{background:var(--upbg);color:var(--up)}.pill.s{background:var(--downbg);color:var(--down)}
+.pill.t{background:#f1f3f6;color:var(--sub);font-weight:500}
+.expand{font-size:12px;color:var(--accent);margin-top:8px;cursor:pointer;user-select:none}
+.lots{margin-top:6px}
+.acts{display:flex;gap:16px;margin-top:8px}
+.acts button{border:0;background:none;color:#9aa1af;font-size:12px;cursor:pointer;padding:0}
+.empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
+.mkt{font-size:13px;margin-top:8px;padding:8px 10px;border-radius:8px;background:#f4f6fa;line-height:1.5}
+.news a{display:block;font-size:13px;color:var(--ink);text-decoration:none;padding:6px 0;border-top:1px dashed var(--line);line-height:1.45}
+.news a small{color:var(--sub)}
+.news .hd{font-size:12px;color:var(--sub);margin-top:6px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+nav .in{display:flex;width:100%;max-width:560px}
+nav button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--sub);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .i{font-size:22px}
+nav button.on{color:var(--accent);font-weight:700}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:80;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40;display:none}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(28px + env(safe-area-inset-bottom));z-index:41;max-width:560px;margin:0 auto;display:none;max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 6px}
+.note{font-size:12px;color:var(--sub);line-height:1.5}
+.subseg{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+.subseg button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-size:14px;color:var(--sub);white-space:nowrap;cursor:pointer}
+.subseg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.modal{display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);align-items:center;justify-content:center;padding:20px}
+.modal .box{background:#fff;border-radius:14px;padding:18px;max-width:340px;width:100%}
+.modal .row{margin-top:14px}
+#login{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;align-items:center;justify-content:center;padding:24px}
+#login .box{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+#login h2{margin:0 0 4px;color:var(--accent)}
+#loading{position:fixed;inset:0;background:var(--bg);z-index:95;display:flex;align-items:center;justify-content:center;color:var(--sub)}
+</style>
+</head>
+<body>
+<div id="loading">載入中…</div>
+
+<div id="login"><div class="box">
+  <h2>📈 股票記錄</h2>
+  <div class="note" id="loginNote">請登入（每台裝置登入一次就會記住）</div>
+  <form onsubmit="event.preventDefault();doLogin()">
+    <label class="f">Email</label><input id="lgEmail" type="email" autocomplete="username" required>
+    <label class="f">密碼</label><input id="lgPw" type="password" autocomplete="current-password" required>
+    <button class="btn" id="lgBtn">登入</button>
+  </form>
+  <div class="note" id="lgErr" style="color:var(--up);margin-top:10px"></div>
+</div></div>
+
+<div class="app">
+  <header>
+    <div style="display:flex;align-items:center"><h1>📈 股票記錄</h1><span class="sync" id="syncState"></span></div>
+    <button class="iconbtn" onclick="openSheet()" aria-label="設定">⚙️</button>
+  </header>
+
+  <main>
+    <!-- 記錄頁 -->
+    <section id="pg-rec">
+      <div class="seg buy" id="segBS">
+        <button data-v="buy" class="on" onclick="setMode('buy')">買進</button>
+        <button data-v="sell" onclick="setMode('sell')">賣出</button>
+      </div>
+
+      <div id="buyForm" class="card">
+        <label class="f">股票（輸入代號或名稱）</label>
+        <div class="suggest" id="stockBox">
+          <input id="stockQ" placeholder="例如 2330 或 台積" autocomplete="off" oninput="sug()" onfocus="sug()">
+          <div class="sug-list" id="sugList" style="display:none"></div>
+        </div>
+        <div id="stockPicked" style="display:none"></div>
+
+        <label class="f">買進時間</label>
+        <input type="datetime-local" id="bDate">
+
+        <div class="row">
+          <div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="bPrice" oninput="calcBuy()" placeholder="0.00"></div>
+          <div>
+            <label class="f">數量</label>
+            <div style="display:flex;gap:6px">
+              <input type="number" inputmode="numeric" id="bQty" oninput="calcBuy()" placeholder="1" style="min-width:0">
+              <div class="unit" id="bUnit"><button class="on" data-u="1000" onclick="setUnit('b',1000)">張</button><button data-u="1" onclick="setUnit('b',1)">股</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lblrow"><label class="f">買進原因（可複選）</label><button class="lnk" id="edBtn-buy" onclick="toggleRsEdit('buy')">✎ 編輯按鈕</button></div>
+        <div class="chips" id="rs-buy"></div>
+        <input id="bReason" placeholder="補充說明（選填）" style="margin-top:8px">
+
+        <label class="f">標籤</label>
+        <div class="chips" id="bTags"></div>
+
+        <details class="more">
+          <summary>＋ 停損價／目標價（選填）</summary>
+          <div class="row">
+            <div><label class="f">停損價</label><input type="number" inputmode="decimal" id="bStop"></div>
+            <div><label class="f">目標價</label><input type="number" inputmode="decimal" id="bTarget"></div>
+          </div>
+        </details>
+
+        <div class="calc" id="bCalc"></div>
+        <button class="btn buy" onclick="saveBuy()">記錄買進</button>
+      </div>
+
+      <div id="sellForm" style="display:none">
+        <div class="card">
+          <label class="f">選擇要賣的持股</label>
+          <div id="sellHolds"></div>
+        </div>
+        <div class="card" id="sellDetail" style="display:none">
+          <label class="f">賣出時間</label>
+          <input type="datetime-local" id="sDate" onchange="calcSell()">
+          <div class="row">
+            <div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="sPrice" oninput="calcSell()" placeholder="0.00"></div>
+            <div>
+              <label class="f">數量 <span id="sMax" class="note"></span></label>
+              <div style="display:flex;gap:6px">
+                <input type="number" inputmode="numeric" id="sQty" oninput="calcSell()" style="min-width:0">
+                <div class="unit" id="sUnit"><button class="on" data-u="1000" onclick="setUnit('s',1000)">張</button><button data-u="1" onclick="setUnit('s',1)">股</button></div>
+              </div>
+            </div>
+          </div>
+          <label class="f" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="sDay" style="width:auto" onchange="calcSell()"> 當日沖銷（股票證交稅減半為 0.15%）</label>
+
+          <div class="lblrow"><label class="f">賣出原因（可複選）</label><button class="lnk" id="edBtn-sell" onclick="toggleRsEdit('sell')">✎ 編輯按鈕</button></div>
+          <div class="chips" id="rs-sell"></div>
+          <input id="sReason" placeholder="補充說明（選填）" style="margin-top:8px">
+
+          <label class="f">檢討／學到什麼（選填）</label>
+          <textarea id="sReview" placeholder="例如：太早賣、有照停損紀律…"></textarea>
+          <label class="f">盤勢／新聞補充（選填）</label>
+          <input id="sMktNote" placeholder="例如：美股大跌、外資賣超…">
+          <div class="note" style="margin-top:6px">📰 當日大盤收盤漲跌與相關新聞，會在收盤後自動附上</div>
+          <div class="calc" id="sCalc"></div>
+          <button class="btn sell" onclick="saveSell()">記錄賣出</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 觀看頁 -->
+    <section id="pg-view" style="display:none">
+      <div class="stats" id="stats"></div>
+      <div class="card filters">
+        <input id="fQ" placeholder="🔍 搜尋代號、名稱、原因、新聞…" oninput="renderView()">
+        <div class="row">
+          <input type="date" id="fFrom" onchange="renderView()" aria-label="起日">
+          <input type="date" id="fTo" onchange="renderView()" aria-label="迄日">
+        </div>
+        <div class="row">
+          <select id="fPL" onchange="renderView()">
+            <option value="">賺賠：全部</option><option value="win">只看賺</option><option value="lose">只看賠</option>
+          </select>
+          <select id="fTag" onchange="renderView()"></select>
+        </div>
+      </div>
+      <div class="subseg" id="viewSeg">
+        <button data-v="hold" class="on" onclick="setView('hold')">持股中</button>
+        <button data-v="real" onclick="setView('real')">已實現</button>
+        <button data-v="all" onclick="setView('all')">全部紀錄</button>
+      </div>
+      <div id="viewList"></div>
+    </section>
+  </main>
+
+  <nav><div class="in">
+    <button id="nav-rec" class="on" onclick="go('rec')"><span class="i">✏️</span>記錄</button>
+    <button id="nav-view" onclick="go('view')"><span class="i">📊</span>觀看</button>
+  </div></nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 設定 -->
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <h3>設定</h3>
+  <div class="note" id="acct"></div>
+  <label class="f">手續費折數</label>
+  <input type="number" step="0.01" id="setDisc" oninput="saveSet()">
+  <div class="note">2.8 折請填 0.28（當下折）。</div>
+  <label class="f">最低手續費（元）</label>
+  <input type="number" id="setMin" oninput="saveSet()">
+  <div class="note">一般 20 元；有些券商零股最低 1 元，確認後改這裡即可。</div>
+  <label class="f">債券 ETF 證交稅（%）</label>
+  <input type="number" step="0.01" id="setBond" oninput="saveSet()">
+  <div class="note">目前債券 ETF 免徵證交稅（填 0）；若之後恢復課徵，改成 0.1。</div>
+  <label class="f">標籤（用逗號分隔）</label>
+  <input id="setTags" onchange="saveSet()">
+  <div class="note" style="margin-top:8px" id="dataInfo"></div>
+  <button class="btn ghost" onclick="exportData()">⬇️ 匯出備份（JSON）</button>
+  <button class="btn ghost" onclick="document.getElementById('impFile').click()">⬆️ 匯入備份</button>
+  <input type="file" id="impFile" accept=".json,application/json" style="display:none" onchange="importData(this)">
+  <div class="note" style="margin-top:6px">匯入以雲端為準：只補回雲端沒有的紀錄，已有的不會被覆蓋。</div>
+  <button class="btn ghost" style="color:var(--up)" onclick="logout()">登出</button>
+  <button class="btn" onclick="closeSheet()">完成</button>
+</div>
+
+<!-- 編輯紀錄 -->
+<div class="sheet" id="editSheet" style="z-index:61"></div>
+<div class="sheet-bg" id="editBg" style="z-index:60" onclick="closeEdit()"></div>
+
+<!-- 輸入框 / 確認框 -->
+<div class="modal" id="inModal"><div class="box">
+  <div id="inTitle" style="font-weight:700;margin-bottom:10px"></div>
+  <input id="inVal" onkeydown="if(event.key==='Enter')inDone(true)">
+  <div class="row"><button class="btn ghost" style="margin:0" onclick="inDone(false)">取消</button><button class="btn" style="margin:0" onclick="inDone(true)">確定</button></div>
+</div></div>
+<div class="modal" id="confirm"><div class="box">
+  <div id="cfMsg"></div>
+  <div class="row"><button class="btn ghost" style="margin:0" onclick="cfDone(false)">取消</button><button class="btn" id="cfOk" style="margin:0;background:var(--up)" onclick="cfDone(true)">刪除</button></div>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ================= 基本設定 =================
+const DEF_SET={disc:0.28,min:20,bondTax:0,tags:["短線","波段","存股","題材","跟單"],
+  reasons:{buy:["財報／法說佳","技術面突破","回檔加碼","定期存股","題材發酵","領股息","營收成長","別人推薦"],
+           sell:["達目標價","跌破停損","獲利了結","換股","需要資金","題材結束","基本面轉差"]}};
+let STOCKS=[], SMAP={}, PRICES={date:'',p:{}}, MKT={}, MKT_LAST='', AUTO={};
+let DB={buys:[],sells:[],set:JSON.parse(JSON.stringify(DEF_SET))};
+let fb=null, uid=null, unsub=[];
+let mode='buy', unitB=1000, unitS=1000, picked=null, pickedSell=null, bTagSel=new Set(), view='hold';
+const rsSel={buy:new Set(),sell:new Set()}, rsEdit={buy:false,sell:false};
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function uid8(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+// ================= 啟動 =================
+async function boot(){
+  const v=new Date().toISOString().slice(0,13);
+  const get=(u,d)=>fetch(u+'?v='+v).then(r=>r.ok?r.json():d).catch(()=>d);
+  const [cfg,st,pr,mk]=await Promise.all([get('config.json',{}),get('data/stocks.json',[]),get('data/prices.json',{date:'',p:{}}),get('data/market.json',{})]);
+  STOCKS=st; SMAP=Object.fromEntries(st.map(s=>[s[0],{code:s[0],name:s[1],t:s[2],m:s[3]}]));
+  PRICES=pr; MKT=mk; MKT_LAST=Object.keys(mk).sort().pop()||'';
+  if(!cfg.firebase||!cfg.firebase.apiKey){
+    $('loading').innerHTML='<div style="padding:24px;text-align:center;line-height:1.7">尚未設定 Firebase。<br>請把 Firebase 設定交給 Claude 完成安裝。</div>';return;
+  }
+  firebase.initializeApp(cfg.firebase);
+  fb={auth:firebase.auth(),db:firebase.firestore()};
+  try{fb.db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
+  fb.auth.onAuthStateChanged(u=>{
+    $('loading').style.display='none';
+    if(!u){uid=null;unsub.forEach(f=>f());unsub=[];$('login').style.display='flex';return}
+    $('login').style.display='none'; start(u);
+  });
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+async function doLogin(){
+  $('lgErr').textContent='';$('lgBtn').disabled=true;
+  try{await fb.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);await fb.auth.signInWithEmailAndPassword($('lgEmail').value.trim(),$('lgPw').value)}
+  catch(e){$('lgErr').textContent=({'auth/invalid-credential':'帳號或密碼錯誤','auth/wrong-password':'密碼錯誤','auth/user-not-found':'找不到這個帳號','auth/too-many-requests':'嘗試太多次，請稍後再試','auth/network-request-failed':'網路連線失敗'})[e.code]||('登入失敗：'+e.message)}
+  $('lgBtn').disabled=false;
+}
+function logout(){closeSheet();fb.auth.signOut()}
+const U=()=>fb.db.collection('users').doc(uid);
+
+function start(u){
+  uid=u.uid; $('acct').textContent='登入帳號：'+u.email;
+  unsub.forEach(f=>f()); unsub=[];
+  const st=s=>{$('syncState').textContent=s.metadata.hasPendingWrites?'同步中…':(s.metadata.fromCache?'離線':'已同步')};
+  unsub.push(U().collection('buys').onSnapshot(s=>{DB.buys=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
+  unsub.push(U().collection('sells').onSnapshot(s=>{DB.sells=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
+  unsub.push(U().onSnapshot(d=>{const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
+  unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
+  $('bDate').value=nowLocal(); refresh();
+}
+let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderTags();renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView()},30)}
+
+// 寫入：買賣紀錄 + 排入新聞佇列
+function saveRec(k,o){
+  const {id,fee,...data}=o;
+  U().collection(k==='b'?'buys':'sells').doc(id).set(data).catch(e=>toast('儲存失敗：'+e.message));
+  queueNews(o.code,o.date);
+}
+function queueNews(code,date){
+  const d=date.slice(0,10);
+  if(AUTO['news_'+d+'_'+code])return;
+  fb.db.collection('queue').doc(d+'_'+code).set({code,name:info(code).name,date:d}).catch(()=>{});
+}
+let sT; function saveSet(){
+  const d=+$('setDisc').value,m=+$('setMin').value,b=+$('setBond').value;
+  if(d>0&&d<=1)DB.set.disc=d; if($('setMin').value!==''&&m>=0)DB.set.min=m; if($('setBond').value!==''&&b>=0)DB.set.bondTax=b;
+  const t=$('setTags').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean); if(t.length)DB.set.tags=t;
+  persistSet(); renderTags();
+}
+function persistSet(){clearTimeout(sT);sT=setTimeout(()=>U().set({set:DB.set},{merge:true}),400)}
+
+// ================= 費用計算 =================
+function info(code){return SMAP[code]||{code,name:code,t:/^00/.test(code)?(/B$/.test(code)?'B':'E'):'S',m:''}}
+function fee(amt){if(amt<=0)return 0;return Math.max(Math.floor(amt*0.001425*DB.set.disc),DB.set.min)}
+function taxRate(code,day){const t=info(code).t;if(t==='B')return (DB.set.bondTax||0)/100;if(t==='E'||t==='N')return 0.001;return day?0.0015:0.003}
+function tax(code,amt,day){return Math.floor(amt*taxRate(code,day))}
+const fmt=n=>Math.round(n).toLocaleString('zh-TW');
+const fmtP=n=>(+n).toLocaleString('zh-TW',{maximumFractionDigits:2});
+const sgn=n=>(n>0?'+':'')+fmt(n);
+const cls=n=>n>0?'up':(n<0?'down':'');
+function qtyTxt(sh){return sh%1000===0?(sh/1000)+' 張':(sh>=1000?Math.floor(sh/1000)+' 張 '+(sh%1000)+' 股':sh+' 股')}
+const dt=s=>s.replace('T',' ');
+function days(a,b){return Math.max(0,Math.round((new Date(b)-new Date(a))/864e5))}
+function rtxt(o){const r=o.reasons||[];return r.join('、')+(r.length&&o.reason?'｜':'')+(o.reason||'')}
+function nowLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+
+// ================= 先進先出 =================
+function compute(extraSell){
+  const lots={},realized=[];
+  const sells=extraSell?[...DB.sells,extraSell]:DB.sells;
+  DB.buys.forEach(b=>{b.fee=fee(b.price*b.shares)});
+  const ev=[...DB.buys.map(b=>({k:'b',d:b.date,o:b})),...sells.map(s=>({k:'s',d:s.date,o:s}))]
+    .sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:(a.k==='b'?-1:1));
+  ev.forEach(e=>{
+    const o=e.o;
+    if(e.k==='b'){(lots[o.code]=lots[o.code]||[]).push({buy:o,left:o.shares});return}
+    const amt=o.price*o.shares,f=fee(amt),tx=tax(o.code,amt,o.daytrade),net=amt-f-tx;
+    let need=o.shares;const matches=[];
+    for(const L of (lots[o.code]||[])){
+      if(need<=0)break;if(L.left<=0)continue;
+      const take=Math.min(need,L.left);
+      const cost=(L.buy.price*L.buy.shares+L.buy.fee)*take/L.buy.shares, rev=net*take/o.shares;
+      matches.push({buy:L.buy,shares:take,cost,rev,pl:rev-cost,days:days(L.buy.date,o.date)});
+      L.left-=take;need-=take;
+    }
+    const cost=matches.reduce((a,m)=>a+m.cost,0),pl=net-cost;
+    realized.push({sell:o,fee:f,tax:tx,net,cost,pl,pct:cost?pl/cost*100:0,matches,short:need});
+  });
+  const holds=[];
+  Object.entries(lots).forEach(([code,ls])=>{
+    const open=ls.filter(l=>l.left>0);if(!open.length)return;
+    const shares=open.reduce((a,l)=>a+l.left,0);
+    const cost=open.reduce((a,l)=>a+(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares,0);
+    const cp=PRICES.p[code];let upl=null;
+    if(cp!=null){const amt=cp*shares;upl=amt-fee(amt)-tax(code,amt,false)-cost}
+    holds.push({code,shares,cost,lots:open,cp,upl,pct:upl!=null&&cost?upl/cost*100:null});
+  });
+  holds.sort((a,b)=>a.code.localeCompare(b.code));
+  return {holds,realized};
+}
+
+// ================= 導覽 =================
+function go(p){
+  ['rec','view'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
+  if(p==='view')renderView();else renderSellHolds();
+  window.scrollTo(0,0);
+}
+function setMode(m){
+  mode=m;const s=$('segBS');s.className='seg '+m;
+  s.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===m));
+  $('buyForm').style.display=m==='buy'?'':'none';$('sellForm').style.display=m==='sell'?'':'none';
+  if(m==='sell')renderSellHolds();
+}
+function setUnit(w,u){
+  if(w==='b')unitB=u;else unitS=u;
+  document.querySelectorAll('#'+w+'Unit button').forEach(b=>b.classList.toggle('on',+b.dataset.u===u));
+  w==='b'?calcBuy():calcSell();
+}
+
+// ================= 股票搜尋 =================
+const TN={S:'',E:'ETF',B:'債券ETF',N:'ETN'};
+function sug(){
+  const q=$('stockQ').value.trim().toUpperCase(),L=$('sugList');
+  if(!q){L.style.display='none';return}
+  let r=STOCKS.filter(s=>s[0].startsWith(q));
+  if(r.length<12)r=r.concat(STOCKS.filter(s=>!s[0].startsWith(q)&&s[1].toUpperCase().includes(q)));
+  r=r.slice(0,12);
+  if(!r.length){L.innerHTML=`<div style="color:var(--sub)">${STOCKS.length?'找不到這檔股票':'股票清單尚未下載，請稍後再試'}</div>`;L.style.display='';return}
+  L.innerHTML=r.map(s=>`<div onclick="pick('${s[0]}')"><span><b>${s[0]}</b> ${esc(s[1])}</span><span class="tag-m">${{'市':'上市','櫃':'上櫃','興':'興櫃'}[s[3]]||''}${TN[s[2]]?'・'+TN[s[2]]:''}</span></div>`).join('');
+  L.style.display='';
+}
+function pick(code){
+  picked=code;const s=info(code);
+  $('stockBox').style.display='none';$('stockPicked').style.display='';
+  $('stockPicked').innerHTML=`<div class="picked"><span>${s.code} ${esc(s.name)}</span><button onclick="unpick()">更換</button></div>`;
+  $('sugList').style.display='none';calcBuy();
+}
+function unpick(focus=true){picked=null;$('stockBox').style.display='';$('stockPicked').style.display='none';$('stockQ').value='';if(focus)$('stockQ').focus();calcBuy()}
+document.addEventListener('click',e=>{if(!e.target.closest('#stockBox'))$('sugList').style.display='none'});
+
+// ================= 膠囊按鈕（原因） =================
+function renderReasons(k,boxId,sel){
+  const L=DB.set.reasons[k]||[],box=$(boxId||'rs-'+k),S=sel||rsSel[k],ed=!sel&&rsEdit[k];
+  if(!box)return;
+  box.innerHTML=L.map((t,i)=>ed
+    ?`<button class="chip edit" onclick="renRs('${k}',${i})">${esc(t)}<span class="x" onclick="event.stopPropagation();delRs('${k}',${i})">✕</span></button>`
+    :`<button class="chip ${S.has(t)?'on':''}" onclick="togRs('${k}',${i},${sel?'true':'false'})">${esc(t)}</button>`).join('')+
+    (ed?`<button class="chip add" onclick="addRs('${k}')">＋ 新增</button>`:'');
+  if(!sel)$('edBtn-'+k).textContent=ed?'✓ 完成':'✎ 編輯按鈕';
+}
+function togRs(k,i,inEdit){const t=DB.set.reasons[k][i],S=inEdit?EDIT.rs:rsSel[k];S.has(t)?S.delete(t):S.add(t);inEdit?renderReasons(k,'ed-rs',EDIT.rs):renderReasons(k)}
+function toggleRsEdit(k){rsEdit[k]=!rsEdit[k];renderReasons(k)}
+function addRs(k){askIn('新增'+(k==='buy'?'買進':'賣出')+'原因','',v=>{if(!DB.set.reasons[k].includes(v))DB.set.reasons[k].push(v);persistSet();renderReasons(k)})}
+function renRs(k,i){const old=DB.set.reasons[k][i];askIn('修改按鈕文字',old,v=>{DB.set.reasons[k][i]=v;if(rsSel[k].delete(old))rsSel[k].add(v);persistSet();renderReasons(k)})}
+function delRs(k,i){const t=DB.set.reasons[k][i];DB.set.reasons[k].splice(i,1);rsSel[k].delete(t);persistSet();renderReasons(k);toast('已移除「'+t+'」（舊紀錄不受影響）')}
+
+// ================= 買進 =================
+function renderTags(){
+  $('bTags').innerHTML=DB.set.tags.map(t=>`<button class="chip ${bTagSel.has(t)?'on':''}" onclick="togTag(this.textContent)">${esc(t)}</button>`).join('');
+  const cur=$('fTag').value;
+  $('fTag').innerHTML='<option value="">標籤：全部</option>'+DB.set.tags.map(t=>`<option ${t===cur?'selected':''}>${esc(t)}</option>`).join('');
+}
+function togTag(t){bTagSel.has(t)?bTagSel.delete(t):bTagSel.add(t);renderTags()}
+function calcBuy(){
+  const p=+$('bPrice').value,q=Math.round(+$('bQty').value*unitB),C=$('bCalc');
+  if(!p||!q){C.innerHTML='<div class="l">輸入價格與數量後自動計算手續費</div>';return}
+  const amt=p*q,f=fee(amt);
+  C.innerHTML=`<div class="l">成交金額<b>${fmt(amt)}</b></div><div class="l">手續費（${+(DB.set.disc*10).toFixed(2)}折）<b>${fmt(f)}</b></div><div class="l tot">總成本<b>${fmt(amt+f)}</b></div><div class="l">每股成本<b>${fmtP((amt+f)/q)}</b></div>`;
+}
+function saveBuy(){
+  const p=+$('bPrice').value,q=Math.round(+$('bQty').value*unitB);
+  if(!picked)return toast('請先選擇股票');if(!p||!q)return toast('請填價格與數量');
+  if(!rsSel.buy.size&&!$('bReason').value.trim())return toast('請選擇買進原因');
+  const o={id:uid8(),code:picked,date:$('bDate').value||nowLocal(),price:p,shares:q,reasons:[...rsSel.buy],reason:$('bReason').value.trim(),
+    tags:[...bTagSel],stop:+$('bStop').value||null,target:+$('bTarget').value||null,created:Date.now()};
+  saveRec('b',o);toast('已記錄買進 '+info(picked).name);
+  ['bPrice','bQty','bReason','bStop','bTarget'].forEach(i=>$(i).value='');
+  bTagSel.clear();rsSel.buy.clear();rsEdit.buy=false;renderTags();renderReasons('buy');unpick(false);
+  $('bDate').value=nowLocal();calcBuy();
+}
+
+// ================= 賣出 =================
+function renderSellHolds(){
+  const {holds}=compute(),H=$('sellHolds');
+  if(pickedSell&&!holds.find(h=>h.code===pickedSell))pickedSell=null;
+  $('sellDetail').style.display=pickedSell?'':'none';
+  if(!holds.length){H.innerHTML='<div class="empty">目前沒有持股</div>';return}
+  H.innerHTML=holds.map(h=>`<div class="hold ${pickedSell===h.code?'on':''}" onclick="pickSell('${h.code}')">
+    <div class="t"><span>${h.code} ${esc(info(h.code).name)}</span><span>${qtyTxt(h.shares)}</span></div>
+    <div class="s">持有成本 ${fmt(h.cost)}・共 ${h.lots.length} 批${h.cp!=null?'・收盤 '+fmtP(h.cp):''}</div></div>`).join('');
+}
+function pickSell(code){
+  pickedSell=code;const h=compute().holds.find(x=>x.code===code);
+  renderSellHolds();
+  $('sMax').textContent='（最多 '+qtyTxt(h.shares)+'）';$('sDate').value=nowLocal();
+  setUnit('s',h.shares%1000===0?1000:1);
+  $('sQty').value=h.shares%1000===0?h.shares/1000:h.shares;
+  calcSell();setTimeout(()=>$('sellDetail').scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+function previewSell(){
+  const p=+$('sPrice').value,q=Math.round(+$('sQty').value*unitS);
+  if(!pickedSell||!p||!q)return null;
+  const fake={id:'_p',code:pickedSell,date:$('sDate').value||nowLocal(),price:p,shares:q,daytrade:$('sDay').checked};
+  return compute(fake).realized.find(x=>x.sell.id==='_p');
+}
+function calcSell(){
+  const C=$('sCalc'),r=previewSell();
+  if(!r){C.innerHTML='<div class="l">輸入價格與數量後自動計算賺賠</div>';return}
+  if(r.short>0){C.innerHTML=`<div class="l" style="color:var(--up)">數量超過該時間點的持股（多 ${qtyTxt(r.short)}）</div>`;return}
+  C.innerHTML=`<div class="l">成交金額<b>${fmt(r.sell.price*r.sell.shares)}</b></div>
+   <div class="l">手續費<b>-${fmt(r.fee)}</b></div><div class="l">證交稅（${(taxRate(r.sell.code,r.sell.daytrade)*100).toFixed(2)}%）<b>-${fmt(r.tax)}</b></div>
+   <div class="l">實拿<b>${fmt(r.net)}</b></div><div class="l">買進成本（先進先出）<b>${fmt(r.cost)}</b></div>
+   <div class="l tot">賺賠<b class="${cls(r.pl)}">${sgn(r.pl)}（${r.pct.toFixed(2)}%）</b></div>
+   ${r.matches.map(m=>`<div class="lot"><span>↳ ${m.buy.date.slice(0,10)} 買 @${fmtP(m.buy.price)}・${qtyTxt(m.shares)}</span><span class="${cls(m.pl)}">${sgn(m.pl)}</span></div>`).join('')}`;
+}
+function saveSell(){
+  const r=previewSell();if(!r)return toast('請填價格與數量');if(r.short>0)return toast('數量超過持股');
+  if(!rsSel.sell.size&&!$('sReason').value.trim())return toast('請選擇賣出原因');
+  const o={id:uid8(),code:pickedSell,date:r.sell.date,price:r.sell.price,shares:r.sell.shares,daytrade:r.sell.daytrade,
+    reasons:[...rsSel.sell],reason:$('sReason').value.trim(),review:$('sReview').value.trim(),mktNote:$('sMktNote').value.trim(),created:Date.now()};
+  saveRec('s',o);toast((r.pl>=0?'賺 ':'賠 ')+fmt(Math.abs(r.pl))+' 元，已記錄');
+  ['sPrice','sQty','sReason','sReview','sMktNote'].forEach(i=>$(i).value='');$('sDay').checked=false;
+  rsSel.sell.clear();rsEdit.sell=false;renderReasons('sell');
+  pickedSell=null;renderSellHolds();calcSell();window.scrollTo(0,0);
+}
+
+// ================= 大盤＋新聞 =================
+function mktHtml(o,compact){
+  const d=o.date.slice(0,10),m=MKT[d],sn=AUTO['news_'+d+'_'+o.code]||[],mn=AUTO['news_'+d+'_MKT']||[];
+  let top;
+  if(m)top=`📊 當日大盤 <b>${m.c.toLocaleString('zh-TW')}</b> <span class="${cls(m.ch)}">${m.ch>0?'▲':m.ch<0?'▼':''} ${fmtP(Math.abs(m.ch))}（${m.p>0?'+':''}${m.p}%）</span>`;
+  else if(!MKT_LAST||d>MKT_LAST)top='📊 當日大盤：收盤後自動補上';
+  else top='📊 當日大盤：無資料（休市或早於自動記錄開始日）';
+  const note=o.mktNote?`<div style="margin-top:4px">📝 ${esc(o.mktNote)}</div>`:'';
+  const n=sn.length+mn.length;
+  const list=a=>a.map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">📰 ${esc(x.t)} <small>${esc(x.s)}</small></a>`).join('');
+  const news=n?`<div class="expand" onclick="tog(this)">▾ 當日新聞（${n}）</div><div class="news" style="display:none">${sn.length?`<div class="hd">${esc(info(o.code).name)}</div>${list(sn)}`:''}${mn.length?`<div class="hd">大盤</div>${list(mn)}`:''}</div>`:'';
+  return `<div class="mkt">${top}${note}${news}</div>`;
+}
+function tog(el){const n=el.nextElementSibling;n.style.display=n.style.display?'':'none'}
+
+// ================= 觀看 =================
+function setView(v){view=v;document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));renderView()}
+function newsTxt(o){const d=o.date.slice(0,10);return [...(AUTO['news_'+d+'_'+o.code]||[]),...(AUTO['news_'+d+'_MKT']||[])].map(x=>x.t)}
+function matchQ(code,texts){
+  const q=$('fQ').value.trim().toUpperCase();if(!q)return true;
+  const s=info(code);return [s.code,s.name,...texts].some(t=>(t||'').toUpperCase().includes(q));
+}
+function inRange(d){const f=$('fFrom').value,t=$('fTo').value,x=d.slice(0,10);return (!f||x>=f)&&(!t||x<=t)}
+function hasTag(tags){const t=$('fTag').value;return !t||(tags||[]).includes(t)}
+function renderView(){
+  const {holds,realized}=compute(),pf=$('fPL').value;
+  const R=realized.filter(r=>matchQ(r.sell.code,[rtxt(r.sell),r.sell.review,r.sell.mktNote,...newsTxt(r.sell),...r.matches.map(m=>rtxt(m.buy))])&&inRange(r.sell.date)
+     &&r.matches.some(m=>hasTag(m.buy.tags))&&(!pf||(pf==='win'?r.pl>0:r.pl<0)));
+  const H=holds.filter(h=>matchQ(h.code,h.lots.map(l=>rtxt(l.buy)))&&h.lots.some(l=>hasTag(l.buy.tags)&&inRange(l.buy.date))&&(!pf||(h.upl!=null&&(pf==='win'?h.upl>0:h.upl<0))));
+  const tot=R.reduce((a,r)=>a+r.pl,0),wins=R.filter(r=>r.pl>0).length;
+  const allM=R.flatMap(r=>r.matches),sh=allM.reduce((a,m)=>a+m.shares,0),avgD=sh?allM.reduce((a,m)=>a+m.days*m.shares,0)/sh:0;
+  const upl=H.reduce((a,h)=>a+(h.upl||0),0);
+  const best=R.length?R.reduce((a,b)=>b.pl>a.pl?b:a):null,worst=R.length?R.reduce((a,b)=>b.pl<a.pl?b:a):null;
+  $('stats').innerHTML=`
+   <div class="stat"><div class="k">已實現損益</div><div class="v ${cls(tot)}">${sgn(tot)}</div><div class="x">${R.length} 筆賣出</div></div>
+   <div class="stat"><div class="k">未實現損益</div><div class="v ${cls(upl)}">${sgn(upl)}</div><div class="x">${PRICES.date?'依 '+PRICES.date.slice(5).replace('-','/')+' 收盤價':'尚無收盤價'}</div></div>
+   <div class="stat"><div class="k">勝率</div><div class="v">${R.length?Math.round(wins/R.length*100):0}%</div><div class="x">${wins} 賺 / ${R.length-wins} 賠</div></div>
+   <div class="stat"><div class="k">平均持有</div><div class="v">${Math.round(avgD)} 天</div><div class="x">${best&&best.pl>0?'最賺 '+esc(info(best.sell.code).name)+' '+sgn(best.pl):''}${worst&&worst.pl<0?'<br>最賠 '+esc(info(worst.sell.code).name)+' '+sgn(worst.pl):''}</div></div>`;
+  const V=$('viewList');
+  if(view==='hold'){
+    V.innerHTML=H.length?H.map(h=>`<div class="item">
+      <div class="h"><div><div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・成本 ${fmt(h.cost)}${h.cp!=null?'・收盤 '+fmtP(h.cp):''}</div></div>
+      <div>${h.upl!=null?`<div class="pl ${cls(h.upl)}">${sgn(h.upl)}</div><div class="pct ${cls(h.upl)}">${h.pct.toFixed(2)}%</div>`:'<div class="meta">無收盤價</div>'}</div></div>
+      <div class="expand" onclick="tog(this)">▾ ${h.lots.length} 批買進明細</div>
+      <div class="lots" style="display:none">${h.lots.map(l=>{const c=(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares;let lp=null;if(h.cp!=null){const a=h.cp*l.left;lp=a-fee(a)-tax(h.code,a,false)-c}
+        return `<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(l.buy.date)} @${fmtP(l.buy.price)}・剩 ${qtyTxt(l.left)}・${days(l.buy.date,new Date())}天</span>${lp!=null?`<span class="${cls(lp)}">${sgn(lp)}</span>`:''}</div>
+        ${rtxt(l.buy)?`<div style="color:var(--ink);margin-top:3px">💬 ${esc(rtxt(l.buy))}</div>`:''}
+        ${(l.buy.stop||l.buy.target)?`<div style="margin-top:2px">停損 ${l.buy.stop||'-'}・目標 ${l.buy.target||'-'}${h.cp!=null&&l.buy.stop&&h.cp<=l.buy.stop?' <b class="down">⚠️ 已跌破停損</b>':''}${h.cp!=null&&l.buy.target&&h.cp>=l.buy.target?' <b class="up">🎯 已達目標</b>':''}</div>`:''}
+        <div>${(l.buy.tags||[]).map(t=>`<span class="pill t">${esc(t)}</span>`).join('')}</div></div>`}).join('')}</div></div>`).join(''):'<div class="empty">沒有符合的持股</div>';
+  }else if(view==='real'){
+    V.innerHTML=R.length?[...R].reverse().map(r=>`<div class="item">
+      <div class="h"><div><div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}</div><div class="meta">${dt(r.sell.date)} 賣 @${fmtP(r.sell.price)}・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div></div>
+      <div><div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div><div class="pct ${cls(r.pl)}">${r.pct.toFixed(2)}%</div></div></div>
+      ${rtxt(r.sell)||r.sell.review?`<div class="why">${rtxt(r.sell)?`<span>賣出原因：</span>${esc(rtxt(r.sell))}`:''}${r.sell.review?`<br><span>檢討：</span>${esc(r.sell.review)}`:''}</div>`:''}
+      ${mktHtml(r.sell)}
+      <div class="expand" onclick="tog(this)">▾ 對應的買進批次（先進先出）</div>
+      <div class="lots" style="display:none">${r.matches.map(m=>`<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(m.buy.date)} 買 @${fmtP(m.buy.price)}・${qtyTxt(m.shares)}・持有${m.days}天</span><span class="${cls(m.pl)}">${sgn(m.pl)}</span></div>${rtxt(m.buy)?`<div style="color:var(--ink);margin-top:3px">💬 ${esc(rtxt(m.buy))}</div>`:''}</div>`).join('')}
+      <div class="lot"><span>手續費＋證交稅</span><span>${fmt(r.fee+r.tax)}</span></div></div></div>`).join(''):'<div class="empty">沒有符合的紀錄</div>';
+  }else{
+    const rmap=Object.fromEntries(realized.map(r=>[r.sell.id,r]));
+    const list=[...DB.buys.map(b=>({k:'b',o:b})),...DB.sells.map(s=>({k:'s',o:s}))]
+      .filter(e=>matchQ(e.o.code,[rtxt(e.o),e.o.review,e.o.mktNote,...newsTxt(e.o)])&&inRange(e.o.date)&&(e.k==='s'||hasTag(e.o.tags))&&(!pf||(e.k==='s'&&rmap[e.o.id]&&(pf==='win'?rmap[e.o.id].pl>0:rmap[e.o.id].pl<0))))
+      .sort((a,b)=>a.o.date<b.o.date?1:-1);
+    V.innerHTML=list.length?list.map(e=>{const o=e.o,r=rmap[o.id];return `<div class="item">
+      <div class="h"><div><div class="nm"><span class="pill ${e.k}">${e.k==='b'?'買':'賣'}</span>${o.code} ${esc(info(o.code).name)}</div>
+      <div class="meta">${dt(o.date)}・@${fmtP(o.price)}・${qtyTxt(o.shares)}</div></div>
+      ${r?`<div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div>`:`<div class="meta">${fmt(o.price*o.shares+fee(o.price*o.shares))}</div>`}</div>
+      ${rtxt(o)?`<div class="why"><span>${e.k==='b'?'買進原因：':'賣出原因：'}</span>${esc(rtxt(o))}${o.review?`<br><span>檢討：</span>${esc(o.review)}`:''}</div>`:''}
+      ${(o.tags||[]).length?`<div style="margin-top:6px">${o.tags.map(t=>`<span class="pill t">${esc(t)}</span>`).join('')}</div>`:''}
+      ${mktHtml(o)}
+      <div class="acts"><button onclick="openEdit('${e.k}','${o.id}')">✎ 修改</button><button onclick="askDel('${e.k}','${o.id}')">刪除</button></div></div>`}).join(''):'<div class="empty">'+(DB.buys.length?'沒有符合的紀錄':'還沒有任何紀錄，先到「記錄」新增一筆買進吧')+'</div>';
+  }
+}
+
+// ================= 修改紀錄 =================
+let EDIT=null;
+function openEdit(k,id){
+  const o=(k==='b'?DB.buys:DB.sells).find(x=>x.id===id);if(!o)return;
+  const rk=k==='b'?'buy':'sell';
+  EDIT={k,id,o,rs:new Set(o.reasons||[]),tags:new Set(o.tags||[])};
+  $('editSheet').innerHTML=`<h3>修改${k==='b'?'買進':'賣出'}：${o.code} ${esc(info(o.code).name)}</h3>
+   <label class="f">時間</label><input type="datetime-local" id="ed-date" value="${o.date}">
+   <div class="row"><div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="ed-price" value="${o.price}"></div>
+   <div><label class="f">股數（1 張 = 1000 股）</label><input type="number" inputmode="numeric" id="ed-shares" value="${o.shares}"></div></div>
+   ${k==='s'?`<label class="f" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="ed-day" style="width:auto" ${o.daytrade?'checked':''}> 當日沖銷</label>`:''}
+   <label class="f">${k==='b'?'買進':'賣出'}原因</label><div class="chips" id="ed-rs"></div>
+   <input id="ed-reason" placeholder="補充說明（選填）" style="margin-top:8px" value="${esc(o.reason||'')}">
+   ${k==='b'?`<label class="f">標籤</label><div class="chips" id="ed-tags"></div>
+     <div class="row"><div><label class="f">停損價</label><input type="number" inputmode="decimal" id="ed-stop" value="${o.stop||''}"></div><div><label class="f">目標價</label><input type="number" inputmode="decimal" id="ed-target" value="${o.target||''}"></div></div>`
+   :`<label class="f">檢討／學到什麼</label><textarea id="ed-review">${esc(o.review||'')}</textarea>
+     <label class="f">盤勢／新聞補充</label><input id="ed-mkt" value="${esc(o.mktNote||'')}">`}
+   <div class="row"><button class="btn ghost" onclick="closeEdit()">取消</button><button class="btn" onclick="saveEdit()">儲存</button></div>`;
+  renderReasons(rk,'ed-rs',EDIT.rs);
+  if(k==='b')renderEdTags();
+  $('editBg').style.display='block';$('editSheet').style.display='block';
+}
+function renderEdTags(){$('ed-tags').innerHTML=DB.set.tags.map(t=>`<button class="chip ${EDIT.tags.has(t)?'on':''}" onclick="EDIT.tags.has(this.textContent)?EDIT.tags.delete(this.textContent):EDIT.tags.add(this.textContent);renderEdTags()">${esc(t)}</button>`).join('')}
+function closeEdit(){$('editBg').style.display='none';$('editSheet').style.display='none';EDIT=null}
+function saveEdit(){
+  const {k,o}=EDIT,n={...o,date:$('ed-date').value||o.date,price:+$('ed-price').value,shares:Math.round(+$('ed-shares').value),
+    reasons:[...EDIT.rs],reason:$('ed-reason').value.trim()};
+  if(!n.price||!n.shares)return toast('價格與股數不可空白');
+  if(k==='b'){n.tags=[...EDIT.tags];n.stop=+$('ed-stop').value||null;n.target=+$('ed-target').value||null}
+  else{n.daytrade=$('ed-day').checked;n.review=$('ed-review').value.trim();n.mktNote=$('ed-mkt').value.trim()}
+  // 檢查修改後所有賣出是否仍有足夠持股
+  const arr=k==='b'?DB.buys:DB.sells,i=arr.indexOf(o);arr[i]=n;
+  const bad=compute().realized.find(r=>r.short>0);arr[i]=o;
+  if(bad)return toast('修改後 '+bad.sell.date.slice(0,10)+' 的賣出會超過持股，請確認');
+  saveRec(k,n);closeEdit();toast('已更新');
+}
+
+// ================= 刪除 =================
+let cfCb=null;
+function askDel(k,id){
+  if(k==='b'&&compute().realized.some(r=>r.matches.some(m=>m.buy.id===id)))return toast('這筆買進已有賣出對應，請先刪除那筆賣出');
+  $('cfMsg').textContent='確定刪除這筆'+(k==='b'?'買進':'賣出')+'紀錄？刪除後無法復原。';$('cfOk').textContent='刪除';
+  $('confirm').style.display='flex';
+  cfCb=()=>{U().collection(k==='b'?'buys':'sells').doc(id).delete().then(()=>toast('已刪除')).catch(e=>toast('刪除失敗：'+e.message))};
+}
+function cfDone(ok){$('confirm').style.display='none';if(ok&&cfCb)cfCb();cfCb=null}
+let inCb=null;
+function askIn(title,val,cb){$('inTitle').textContent=title;$('inVal').value=val;$('inModal').style.display='flex';inCb=cb;setTimeout(()=>$('inVal').focus(),50)}
+function inDone(ok){const v=$('inVal').value.trim();$('inModal').style.display='none';if(ok&&v&&inCb)inCb(v);inCb=null}
+
+// ================= 設定／備份 =================
+function openSheet(){
+  $('setDisc').value=DB.set.disc;$('setMin').value=DB.set.min;$('setBond').value=DB.set.bondTax||0;$('setTags').value=DB.set.tags.join(',');
+  $('dataInfo').textContent=`股票清單 ${STOCKS.length} 檔・收盤價 ${PRICES.date||'尚無'}・大盤 ${MKT_LAST||'尚無'}`;
+  $('sheetBg').style.display='block';$('sheet').style.display='block';
+}
+function closeSheet(){$('sheetBg').style.display='none';$('sheet').style.display='none';calcBuy();calcSell()}
+function exportData(){
+  const strip=a=>a.map(({fee,...x})=>x);
+  const blob=new Blob([JSON.stringify({app:'stock-record',exported:new Date().toISOString(),buys:strip(DB.buys),sells:strip(DB.sells),set:DB.set},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='股票記錄備份_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function importData(inp){
+  const f=inp.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=async()=>{
+    try{
+      const d=JSON.parse(rd.result),hb=new Set(DB.buys.map(x=>x.id)),hs=new Set(DB.sells.map(x=>x.id));
+      const nb=(d.buys||[]).filter(x=>x.id&&!hb.has(x.id)),ns=(d.sells||[]).filter(x=>x.id&&!hs.has(x.id));
+      const batch=fb.db.batch();
+      nb.forEach(({id,fee,...x})=>batch.set(U().collection('buys').doc(id),x));
+      ns.forEach(({id,fee,...x})=>batch.set(U().collection('sells').doc(id),x));
+      await batch.commit();toast(`已匯入 ${nb.length} 筆買進、${ns.length} 筆賣出`);
+    }catch(e){toast('匯入失敗：'+e.message)}
+    inp.value='';
+  };
+  rd.readAsText(f);
+}
+
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
+boot();
+</script>
+</body>
+</html>

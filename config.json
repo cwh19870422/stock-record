@@ -1,0 +1,11 @@
+{
+  "firebase": {
+    "apiKey": "AIzaSyBXgAPaXwne3jMW9VoKYKs8jS7Gyq5ttmI",
+    "authDomain": "my-stock-a493b.firebaseapp.com",
+    "projectId": "my-stock-a493b",
+    "storageBucket": "my-stock-a493b.firebasestorage.app",
+    "messagingSenderId": "161616564211",
+    "appId": "1:161616564211:web:594f16f21b832870038c86"
+  },
+  "botEmail": "stock-bot@example.com"
+}
