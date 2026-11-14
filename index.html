@@ -89,6 +89,7 @@ details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4
 .pill.t{background:#f1f3f6;color:var(--sub);font-weight:500}
 .expand{font-size:12px;color:var(--accent);margin-top:8px;cursor:pointer;user-select:none}
 .lots{margin-top:6px}
+.rg{display:flex;gap:6px;overflow-x:auto}.rg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 0;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;min-width:52px}.rg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .qd{display:flex;gap:6px;margin-top:6px}.qd button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px;color:var(--accent);cursor:pointer}
 .acts{display:flex;gap:16px;margin-top:8px}
 .acts button{border:0;background:none;color:#9aa1af;font-size:12px;cursor:pointer;padding:0}
@@ -225,10 +226,13 @@ nav button.on{color:var(--accent);font-weight:700}
     <section id="pg-view" style="display:none">
       <div class="stats" id="stats"></div>
       <div class="card filters">
+        <div class="rg" id="rangeBtns">
+          <button data-r="day" onclick="setRange('day')">本日</button><button data-r="week" onclick="setRange('week')">本週</button><button data-r="month" onclick="setRange('month')">本月</button><button data-r="year" onclick="setRange('year')">今年</button><button data-r="all" class="on" onclick="setRange('all')">全部</button>
+        </div>
         <input id="fQ" placeholder="🔍 搜尋代號、名稱、原因、新聞…" oninput="renderView()">
         <div class="row">
-          <input type="date" id="fFrom" onchange="renderView()" aria-label="起日">
-          <input type="date" id="fTo" onchange="renderView()" aria-label="迄日">
+          <input type="date" id="fFrom" onchange="markRange('');renderView()" aria-label="起日">
+          <input type="date" id="fTo" onchange="markRange('');renderView()" aria-label="迄日">
         </div>
         <div class="row">
           <select id="fPL" onchange="renderView()">
@@ -578,6 +582,17 @@ function matchQ(code,texts){
   const q=$('fQ').value.trim().toUpperCase();if(!q)return true;
   const s=info(code);return [s.code,s.name,...texts].some(t=>(t||'').toUpperCase().includes(q));
 }
+function setRange(r){
+  const t=nowLocal().slice(0,10),d=new Date(t+'T12:00'),f=x=>{x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,10)};
+  let from='';
+  if(r==='day')from=t;
+  else if(r==='week'){const m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));from=f(m)}
+  else if(r==='month')from=t.slice(0,8)+'01';
+  else if(r==='year')from=t.slice(0,5)+'01-01';
+  $('fFrom').value=from;$('fTo').value=r==='all'?'':t;markRange(r);renderView();
+}
+function markRange(r){document.querySelectorAll('#rangeBtns button').forEach(b=>b.classList.toggle('on',b.dataset.r===r))}
+const RLABEL={day:'本日',week:'本週',month:'本月',year:'今年',all:''};
 function inRange(d){const f=$('fFrom').value,t=$('fTo').value,x=d.slice(0,10);return (!f||x>=f)&&(!t||x<=t)}
 function renderView(){
   const {holds,realized}=compute(),pf=$('fPL').value;
@@ -589,7 +604,7 @@ function renderView(){
   const upl=H.reduce((a,h)=>a+(h.upl||0),0);
   const best=R.length?R.reduce((a,b)=>b.pl>a.pl?b:a):null,worst=R.length?R.reduce((a,b)=>b.pl<a.pl?b:a):null;
   $('stats').innerHTML=`
-   <div class="stat"><div class="k">已實現損益</div><div class="v ${cls(tot)}">${sgn(tot)}</div><div class="x">${R.length} 筆賣出</div></div>
+   <div class="stat"><div class="k">${(RLABEL[(document.querySelector('#rangeBtns .on')||{}).dataset?.r]||(($('fFrom').value||$('fTo').value)?'區間':''))}已實現損益</div><div class="v ${cls(tot)}">${sgn(tot)}</div><div class="x">${R.length} 筆賣出</div></div>
    <div class="stat"><div class="k">未實現損益</div><div class="v ${cls(upl)}">${sgn(upl)}</div><div class="x">${PRICES.date?'依 '+PRICES.date.slice(5).replace('-','/')+' 收盤價':'尚無收盤價'}</div></div>
    <div class="stat"><div class="k">勝率</div><div class="v">${R.length?Math.round(wins/R.length*100):0}%</div><div class="x">${wins} 賺 / ${R.length-wins} 賠</div></div>
    <div class="stat"><div class="k">平均持有</div><div class="v">${Math.round(avgD)} 天</div><div class="x">${best&&best.pl>0?'最賺 '+esc(info(best.sell.code).name)+' '+sgn(best.pl):''}${worst&&worst.pl<0?'<br>最賠 '+esc(info(worst.sell.code).name)+' '+sgn(worst.pl):''}</div></div>`;
