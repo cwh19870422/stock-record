@@ -89,6 +89,7 @@ details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4
 .pill.t{background:#f1f3f6;color:var(--sub);font-weight:500}
 .expand{font-size:12px;color:var(--accent);margin-top:8px;cursor:pointer;user-select:none}
 .lots{margin-top:6px}
+.qd{display:flex;gap:6px;margin-top:6px}.qd button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px;color:var(--accent);cursor:pointer}
 .acts{display:flex;gap:16px;margin-top:8px}
 .acts button{border:0;background:none;color:#9aa1af;font-size:12px;cursor:pointer;padding:0}
 .empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
@@ -157,6 +158,7 @@ nav button.on{color:var(--accent);font-weight:700}
 
         <label class="f">買進時間</label>
         <input type="datetime-local" id="bDate">
+        <div class="qd"><button onclick="quickDate('bDate',0)">今天</button><button onclick="quickDate('bDate',1)">上一個交易日</button></div>
 
         <div class="row">
           <div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="bPrice" oninput="calcBuy()" placeholder="0.00"></div>
@@ -173,16 +175,11 @@ nav button.on{color:var(--accent);font-weight:700}
         <div class="chips" id="rs-buy"></div>
         <input id="bReason" placeholder="補充說明（選填）" style="margin-top:8px">
 
-        <label class="f">標籤</label>
-        <div class="chips" id="bTags"></div>
-
-        <details class="more">
-          <summary>＋ 停損價／目標價（選填）</summary>
-          <div class="row">
-            <div><label class="f">停損價</label><input type="number" inputmode="decimal" id="bStop"></div>
-            <div><label class="f">目標價</label><input type="number" inputmode="decimal" id="bTarget"></div>
-          </div>
-        </details>
+        <div class="row">
+          <div><label class="f" id="lbStop">停損價</label><input type="number" inputmode="decimal" step="0.01" id="bStop" oninput="this.dataset.manual=1"></div>
+          <div><label class="f" id="lbTarget">停利價</label><input type="number" inputmode="decimal" step="0.01" id="bTarget" oninput="this.dataset.manual=1"></div>
+        </div>
+        <div class="note" style="margin-top:4px">依成交價自動帶入，可自行修改；％數可在 ⚙️ 設定調整。</div>
 
         <div class="calc" id="bCalc"></div>
         <button class="btn buy" onclick="saveBuy()">記錄買進</button>
@@ -196,6 +193,7 @@ nav button.on{color:var(--accent);font-weight:700}
         <div class="card" id="sellDetail" style="display:none">
           <label class="f">賣出時間</label>
           <input type="datetime-local" id="sDate" onchange="calcSell()">
+          <div class="qd"><button onclick="quickDate('sDate',0)">今天</button><button onclick="quickDate('sDate',1)">上一個交易日</button></div>
           <div class="row">
             <div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="sPrice" oninput="calcSell()" placeholder="0.00"></div>
             <div>
@@ -236,7 +234,6 @@ nav button.on{color:var(--accent);font-weight:700}
           <select id="fPL" onchange="renderView()">
             <option value="">賺賠：全部</option><option value="win">只看賺</option><option value="lose">只看賠</option>
           </select>
-          <select id="fTag" onchange="renderView()"></select>
         </div>
       </div>
       <div class="subseg" id="viewSeg">
@@ -270,8 +267,10 @@ nav button.on{color:var(--accent);font-weight:700}
   <label class="f">債券 ETF 證交稅（%）</label>
   <input type="number" step="0.01" id="setBond" oninput="saveSet()">
   <div class="note">目前債券 ETF 免徵證交稅（填 0）；若之後恢復課徵，改成 0.1。</div>
-  <label class="f">標籤（用逗號分隔）</label>
-  <input id="setTags" onchange="saveSet()">
+  <div class="row">
+    <div><label class="f">停損（買價 -％）</label><input type="number" step="0.1" id="setStop" oninput="saveSet()"></div>
+    <div><label class="f">停利（買價 +％）</label><input type="number" step="0.1" id="setTarget" oninput="saveSet()"></div>
+  </div>
   <div class="note" style="margin-top:8px" id="dataInfo"></div>
   <button class="btn ghost" onclick="exportData()">⬇️ 匯出備份（JSON）</button>
   <button class="btn ghost" onclick="document.getElementById('impFile').click()">⬆️ 匯入備份</button>
@@ -301,13 +300,13 @@ nav button.on{color:var(--accent);font-weight:700}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ================= 基本設定 =================
-const DEF_SET={disc:0.28,min:20,bondTax:0,tags:["短線","波段","存股","題材","跟單"],
+const DEF_SET={disc:0.28,min:20,bondTax:0,stopPct:5,targetPct:10,tags:["短線","波段","存股","題材","跟單"],
   reasons:{buy:["財報／法說佳","技術面突破","回檔加碼","定期存股","題材發酵","領股息","營收成長","別人推薦"],
            sell:["達目標價","跌破停損","獲利了結","換股","需要資金","題材結束","基本面轉差"]}};
 let STOCKS=[], SMAP={}, PRICES={date:'',p:{}}, MKT={}, MKT_LAST='', AUTO={};
 let DB={buys:[],sells:[],set:JSON.parse(JSON.stringify(DEF_SET))};
 let fb=null, uid=null, unsub=[];
-let mode='buy', unitB=1000, unitS=1000, picked=null, pickedSell=null, bTagSel=new Set(), view='hold';
+let mode='buy', unitB=1000, unitS=1000, picked=null, pickedSell=null, view='hold';
 const rsSel={buy:new Set(),sell:new Set()}, rsEdit={buy:false,sell:false};
 
 const $=id=>document.getElementById(id);
@@ -353,7 +352,7 @@ function start(u){
   unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
   $('bDate').value=nowLocal(); refresh();
 }
-let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderTags();renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView()},30)}
+let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView()},30)}
 
 // 寫入：買賣紀錄 + 排入新聞佇列
 function saveRec(k,o){
@@ -369,8 +368,9 @@ function queueNews(code,date){
 let sT; function saveSet(){
   const d=+$('setDisc').value,m=+$('setMin').value,b=+$('setBond').value;
   if(d>0&&d<=1)DB.set.disc=d; if($('setMin').value!==''&&m>=0)DB.set.min=m; if($('setBond').value!==''&&b>=0)DB.set.bondTax=b;
-  const t=$('setTags').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean); if(t.length)DB.set.tags=t;
-  persistSet(); renderTags();
+  const sp=+$('setStop').value,tp=+$('setTarget').value;
+  if($('setStop').value!==''&&sp>=0)DB.set.stopPct=sp; if($('setTarget').value!==''&&tp>=0)DB.set.targetPct=tp;
+  persistSet();
 }
 function persistSet(){clearTimeout(sT);sT=setTimeout(()=>U().set({set:DB.set},{merge:true}),400)}
 
@@ -386,6 +386,13 @@ const cls=n=>n>0?'up':(n<0?'down':'');
 function qtyTxt(sh){return sh%1000===0?(sh/1000)+' 張':(sh>=1000?Math.floor(sh/1000)+' 張 '+(sh%1000)+' 股':sh+' 股')}
 const dt=s=>s.replace('T',' ');
 function days(a,b){return Math.max(0,Math.round((new Date(b)-new Date(a))/864e5))}
+// 依台股升降單位四捨五入
+function tick(x){const t=x<10?0.01:x<50?0.05:x<100?0.1:x<500?0.5:x<1000?1:5;return +(Math.round(x/t)*t).toFixed(2)}
+function quickDate(id,back){
+  const n=nowLocal();let d=n.slice(0,10);
+  if(back){const today=d;d=Object.keys(MKT).filter(k=>k<today).sort().pop()||d}
+  $(id).value=d+'T'+(back?'13:30':n.slice(11));if(id==='sDate')calcSell();
+}
 function rtxt(o){const r=o.reasons||[];return r.join('、')+(r.length&&o.reason?'｜':'')+(o.reason||'')}
 function nowLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 
@@ -480,14 +487,12 @@ function renRs(k,i){const old=DB.set.reasons[k][i];askIn('修改按鈕文字',ol
 function delRs(k,i){const t=DB.set.reasons[k][i];DB.set.reasons[k].splice(i,1);rsSel[k].delete(t);persistSet();renderReasons(k);toast('已移除「'+t+'」（舊紀錄不受影響）')}
 
 // ================= 買進 =================
-function renderTags(){
-  $('bTags').innerHTML=DB.set.tags.map(t=>`<button class="chip ${bTagSel.has(t)?'on':''}" onclick="togTag(this.textContent)">${esc(t)}</button>`).join('');
-  const cur=$('fTag').value;
-  $('fTag').innerHTML='<option value="">標籤：全部</option>'+DB.set.tags.map(t=>`<option ${t===cur?'selected':''}>${esc(t)}</option>`).join('');
-}
-function togTag(t){bTagSel.has(t)?bTagSel.delete(t):bTagSel.add(t);renderTags()}
 function calcBuy(){
   const p=+$('bPrice').value,q=Math.round(+$('bQty').value*unitB),C=$('bCalc');
+  const sp=DB.set.stopPct??5,tp=DB.set.targetPct??10;
+  $('lbStop').textContent=`停損價（-${sp}%）`;$('lbTarget').textContent=`停利價（+${tp}%）`;
+  if(!$('bStop').dataset.manual)$('bStop').value=p?tick(p*(1-sp/100)):'';
+  if(!$('bTarget').dataset.manual)$('bTarget').value=p?tick(p*(1+tp/100)):'';
   if(!p||!q){C.innerHTML='<div class="l">輸入價格與數量後自動計算手續費</div>';return}
   const amt=p*q,f=fee(amt);
   C.innerHTML=`<div class="l">成交金額<b>${fmt(amt)}</b></div><div class="l">手續費（${+(DB.set.disc*10).toFixed(2)}折）<b>${fmt(f)}</b></div><div class="l tot">總成本<b>${fmt(amt+f)}</b></div><div class="l">每股成本<b>${fmtP((amt+f)/q)}</b></div>`;
@@ -497,10 +502,10 @@ function saveBuy(){
   if(!picked)return toast('請先選擇股票');if(!p||!q)return toast('請填價格與數量');
   if(!rsSel.buy.size&&!$('bReason').value.trim())return toast('請選擇買進原因');
   const o={id:uid8(),code:picked,date:$('bDate').value||nowLocal(),price:p,shares:q,reasons:[...rsSel.buy],reason:$('bReason').value.trim(),
-    tags:[...bTagSel],stop:+$('bStop').value||null,target:+$('bTarget').value||null,created:Date.now()};
+    stop:+$('bStop').value||null,target:+$('bTarget').value||null,created:Date.now()};
   saveRec('b',o);toast('已記錄買進 '+info(picked).name);
-  ['bPrice','bQty','bReason','bStop','bTarget'].forEach(i=>$(i).value='');
-  bTagSel.clear();rsSel.buy.clear();rsEdit.buy=false;renderTags();renderReasons('buy');unpick(false);
+  ['bPrice','bQty','bReason','bStop','bTarget'].forEach(i=>$(i).value='');delete $('bStop').dataset.manual;delete $('bTarget').dataset.manual;
+  rsSel.buy.clear();rsEdit.buy=false;renderReasons('buy');unpick(false);
   $('bDate').value=nowLocal();calcBuy();
 }
 
@@ -554,8 +559,10 @@ function mktHtml(o,compact){
   const d=o.date.slice(0,10),m=MKT[d],sn=AUTO['news_'+d+'_'+o.code]||[],mn=AUTO['news_'+d+'_MKT']||[];
   let top;
   if(m)top=`📊 當日大盤 <b>${m.c.toLocaleString('zh-TW')}</b> <span class="${cls(m.ch)}">${m.ch>0?'▲':m.ch<0?'▼':''} ${fmtP(Math.abs(m.ch))}（${m.p>0?'+':''}${m.p}%）</span>`;
-  else if(!MKT_LAST||d>MKT_LAST)top='📊 當日大盤：收盤後自動補上';
-  else top='📊 當日大盤：無資料（休市或早於自動記錄開始日）';
+  else{const wd=new Date(d+'T12:00').getDay();
+    if(wd===0||wd===6)top='📊 當日大盤：週末休市';
+    else if(!MKT_LAST||d>MKT_LAST)top='📊 當日大盤：收盤後自動補上（約 16:40）';
+    else top='📊 當日大盤：休市日';}
   const note=o.mktNote?`<div style="margin-top:4px">📝 ${esc(o.mktNote)}</div>`:'';
   const n=sn.length+mn.length;
   const list=a=>a.map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">📰 ${esc(x.t)} <small>${esc(x.s)}</small></a>`).join('');
@@ -572,12 +579,11 @@ function matchQ(code,texts){
   const s=info(code);return [s.code,s.name,...texts].some(t=>(t||'').toUpperCase().includes(q));
 }
 function inRange(d){const f=$('fFrom').value,t=$('fTo').value,x=d.slice(0,10);return (!f||x>=f)&&(!t||x<=t)}
-function hasTag(tags){const t=$('fTag').value;return !t||(tags||[]).includes(t)}
 function renderView(){
   const {holds,realized}=compute(),pf=$('fPL').value;
   const R=realized.filter(r=>matchQ(r.sell.code,[rtxt(r.sell),r.sell.review,r.sell.mktNote,...newsTxt(r.sell),...r.matches.map(m=>rtxt(m.buy))])&&inRange(r.sell.date)
-     &&r.matches.some(m=>hasTag(m.buy.tags))&&(!pf||(pf==='win'?r.pl>0:r.pl<0)));
-  const H=holds.filter(h=>matchQ(h.code,h.lots.map(l=>rtxt(l.buy)))&&h.lots.some(l=>hasTag(l.buy.tags)&&inRange(l.buy.date))&&(!pf||(h.upl!=null&&(pf==='win'?h.upl>0:h.upl<0))));
+     &&(!pf||(pf==='win'?r.pl>0:r.pl<0)));
+  const H=holds.filter(h=>matchQ(h.code,h.lots.map(l=>rtxt(l.buy)))&&h.lots.some(l=>inRange(l.buy.date))&&(!pf||(h.upl!=null&&(pf==='win'?h.upl>0:h.upl<0))));
   const tot=R.reduce((a,r)=>a+r.pl,0),wins=R.filter(r=>r.pl>0).length;
   const allM=R.flatMap(r=>r.matches),sh=allM.reduce((a,m)=>a+m.shares,0),avgD=sh?allM.reduce((a,m)=>a+m.days*m.shares,0)/sh:0;
   const upl=H.reduce((a,h)=>a+(h.upl||0),0);
@@ -596,8 +602,9 @@ function renderView(){
       <div class="lots" style="display:none">${h.lots.map(l=>{const c=(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares;let lp=null;if(h.cp!=null){const a=h.cp*l.left;lp=a-fee(a)-tax(h.code,a,false)-c}
         return `<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(l.buy.date)} @${fmtP(l.buy.price)}・剩 ${qtyTxt(l.left)}・${days(l.buy.date,new Date())}天</span>${lp!=null?`<span class="${cls(lp)}">${sgn(lp)}</span>`:''}</div>
         ${rtxt(l.buy)?`<div style="color:var(--ink);margin-top:3px">💬 ${esc(rtxt(l.buy))}</div>`:''}
-        ${(l.buy.stop||l.buy.target)?`<div style="margin-top:2px">停損 ${l.buy.stop||'-'}・目標 ${l.buy.target||'-'}${h.cp!=null&&l.buy.stop&&h.cp<=l.buy.stop?' <b class="down">⚠️ 已跌破停損</b>':''}${h.cp!=null&&l.buy.target&&h.cp>=l.buy.target?' <b class="up">🎯 已達目標</b>':''}</div>`:''}
-        <div>${(l.buy.tags||[]).map(t=>`<span class="pill t">${esc(t)}</span>`).join('')}</div></div>`}).join('')}</div></div>`).join(''):'<div class="empty">沒有符合的持股</div>';
+        ${(l.buy.stop||l.buy.target)?`<div style="margin-top:2px">停損 ${l.buy.stop||'-'}・停利 ${l.buy.target||'-'}${h.cp!=null&&l.buy.stop&&h.cp<=l.buy.stop?' <b class="down">⚠️ 已跌破停損</b>':''}${h.cp!=null&&l.buy.target&&h.cp>=l.buy.target?' <b class="up">🎯 已達停利</b>':''}</div>`:''}
+        ${mktHtml(l.buy)}
+        <div class="acts"><button onclick="openEdit('b','${l.buy.id}')">✎ 修改</button><button onclick="askDel('b','${l.buy.id}')">刪除</button></div></div>`}).join('')}</div></div>`).join(''):'<div class="empty">沒有符合的持股</div>';
   }else if(view==='real'){
     V.innerHTML=R.length?[...R].reverse().map(r=>`<div class="item">
       <div class="h"><div><div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}</div><div class="meta">${dt(r.sell.date)} 賣 @${fmtP(r.sell.price)}・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div></div>
@@ -606,18 +613,18 @@ function renderView(){
       ${mktHtml(r.sell)}
       <div class="expand" onclick="tog(this)">▾ 對應的買進批次（先進先出）</div>
       <div class="lots" style="display:none">${r.matches.map(m=>`<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(m.buy.date)} 買 @${fmtP(m.buy.price)}・${qtyTxt(m.shares)}・持有${m.days}天</span><span class="${cls(m.pl)}">${sgn(m.pl)}</span></div>${rtxt(m.buy)?`<div style="color:var(--ink);margin-top:3px">💬 ${esc(rtxt(m.buy))}</div>`:''}</div>`).join('')}
-      <div class="lot"><span>手續費＋證交稅</span><span>${fmt(r.fee+r.tax)}</span></div></div></div>`).join(''):'<div class="empty">沒有符合的紀錄</div>';
+      <div class="lot"><span>手續費＋證交稅</span><span>${fmt(r.fee+r.tax)}</span></div></div>
+      <div class="acts"><button onclick="openEdit('s','${r.sell.id}')">✎ 修改這筆賣出</button><button onclick="askDel('s','${r.sell.id}')">刪除</button></div></div>`).join(''):'<div class="empty">沒有符合的紀錄</div>';
   }else{
     const rmap=Object.fromEntries(realized.map(r=>[r.sell.id,r]));
     const list=[...DB.buys.map(b=>({k:'b',o:b})),...DB.sells.map(s=>({k:'s',o:s}))]
-      .filter(e=>matchQ(e.o.code,[rtxt(e.o),e.o.review,e.o.mktNote,...newsTxt(e.o)])&&inRange(e.o.date)&&(e.k==='s'||hasTag(e.o.tags))&&(!pf||(e.k==='s'&&rmap[e.o.id]&&(pf==='win'?rmap[e.o.id].pl>0:rmap[e.o.id].pl<0))))
+      .filter(e=>matchQ(e.o.code,[rtxt(e.o),e.o.review,e.o.mktNote,...newsTxt(e.o)])&&inRange(e.o.date)&&(!pf||(e.k==='s'&&rmap[e.o.id]&&(pf==='win'?rmap[e.o.id].pl>0:rmap[e.o.id].pl<0))))
       .sort((a,b)=>a.o.date<b.o.date?1:-1);
     V.innerHTML=list.length?list.map(e=>{const o=e.o,r=rmap[o.id];return `<div class="item">
       <div class="h"><div><div class="nm"><span class="pill ${e.k}">${e.k==='b'?'買':'賣'}</span>${o.code} ${esc(info(o.code).name)}</div>
       <div class="meta">${dt(o.date)}・@${fmtP(o.price)}・${qtyTxt(o.shares)}</div></div>
       ${r?`<div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div>`:`<div class="meta">${fmt(o.price*o.shares+fee(o.price*o.shares))}</div>`}</div>
       ${rtxt(o)?`<div class="why"><span>${e.k==='b'?'買進原因：':'賣出原因：'}</span>${esc(rtxt(o))}${o.review?`<br><span>檢討：</span>${esc(o.review)}`:''}</div>`:''}
-      ${(o.tags||[]).length?`<div style="margin-top:6px">${o.tags.map(t=>`<span class="pill t">${esc(t)}</span>`).join('')}</div>`:''}
       ${mktHtml(o)}
       <div class="acts"><button onclick="openEdit('${e.k}','${o.id}')">✎ 修改</button><button onclick="askDel('${e.k}','${o.id}')">刪除</button></div></div>`}).join(''):'<div class="empty">'+(DB.buys.length?'沒有符合的紀錄':'還沒有任何紀錄，先到「記錄」新增一筆買進吧')+'</div>';
   }
@@ -628,7 +635,7 @@ let EDIT=null;
 function openEdit(k,id){
   const o=(k==='b'?DB.buys:DB.sells).find(x=>x.id===id);if(!o)return;
   const rk=k==='b'?'buy':'sell';
-  EDIT={k,id,o,rs:new Set(o.reasons||[]),tags:new Set(o.tags||[])};
+  EDIT={k,id,o,rs:new Set(o.reasons||[])};
   $('editSheet').innerHTML=`<h3>修改${k==='b'?'買進':'賣出'}：${o.code} ${esc(info(o.code).name)}</h3>
    <label class="f">時間</label><input type="datetime-local" id="ed-date" value="${o.date}">
    <div class="row"><div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="ed-price" value="${o.price}"></div>
@@ -636,22 +643,19 @@ function openEdit(k,id){
    ${k==='s'?`<label class="f" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="ed-day" style="width:auto" ${o.daytrade?'checked':''}> 當日沖銷</label>`:''}
    <label class="f">${k==='b'?'買進':'賣出'}原因</label><div class="chips" id="ed-rs"></div>
    <input id="ed-reason" placeholder="補充說明（選填）" style="margin-top:8px" value="${esc(o.reason||'')}">
-   ${k==='b'?`<label class="f">標籤</label><div class="chips" id="ed-tags"></div>
-     <div class="row"><div><label class="f">停損價</label><input type="number" inputmode="decimal" id="ed-stop" value="${o.stop||''}"></div><div><label class="f">目標價</label><input type="number" inputmode="decimal" id="ed-target" value="${o.target||''}"></div></div>`
+   ${k==='b'?`<div class="row"><div><label class="f">停損價</label><input type="number" inputmode="decimal" id="ed-stop" value="${o.stop||''}"></div><div><label class="f">停利價</label><input type="number" inputmode="decimal" id="ed-target" value="${o.target||''}"></div></div>`
    :`<label class="f">檢討／學到什麼</label><textarea id="ed-review">${esc(o.review||'')}</textarea>
      <label class="f">盤勢／新聞補充</label><input id="ed-mkt" value="${esc(o.mktNote||'')}">`}
    <div class="row"><button class="btn ghost" onclick="closeEdit()">取消</button><button class="btn" onclick="saveEdit()">儲存</button></div>`;
   renderReasons(rk,'ed-rs',EDIT.rs);
-  if(k==='b')renderEdTags();
   $('editBg').style.display='block';$('editSheet').style.display='block';
 }
-function renderEdTags(){$('ed-tags').innerHTML=DB.set.tags.map(t=>`<button class="chip ${EDIT.tags.has(t)?'on':''}" onclick="EDIT.tags.has(this.textContent)?EDIT.tags.delete(this.textContent):EDIT.tags.add(this.textContent);renderEdTags()">${esc(t)}</button>`).join('')}
 function closeEdit(){$('editBg').style.display='none';$('editSheet').style.display='none';EDIT=null}
 function saveEdit(){
   const {k,o}=EDIT,n={...o,date:$('ed-date').value||o.date,price:+$('ed-price').value,shares:Math.round(+$('ed-shares').value),
     reasons:[...EDIT.rs],reason:$('ed-reason').value.trim()};
   if(!n.price||!n.shares)return toast('價格與股數不可空白');
-  if(k==='b'){n.tags=[...EDIT.tags];n.stop=+$('ed-stop').value||null;n.target=+$('ed-target').value||null}
+  if(k==='b'){n.stop=+$('ed-stop').value||null;n.target=+$('ed-target').value||null}
   else{n.daytrade=$('ed-day').checked;n.review=$('ed-review').value.trim();n.mktNote=$('ed-mkt').value.trim()}
   // 檢查修改後所有賣出是否仍有足夠持股
   const arr=k==='b'?DB.buys:DB.sells,i=arr.indexOf(o);arr[i]=n;
@@ -675,7 +679,7 @@ function inDone(ok){const v=$('inVal').value.trim();$('inModal').style.display='
 
 // ================= 設定／備份 =================
 function openSheet(){
-  $('setDisc').value=DB.set.disc;$('setMin').value=DB.set.min;$('setBond').value=DB.set.bondTax||0;$('setTags').value=DB.set.tags.join(',');
+  $('setDisc').value=DB.set.disc;$('setMin').value=DB.set.min;$('setBond').value=DB.set.bondTax||0;$('setStop').value=DB.set.stopPct??5;$('setTarget').value=DB.set.targetPct??10;
   $('dataInfo').textContent=`股票清單 ${STOCKS.length} 檔・收盤價 ${PRICES.date||'尚無'}・大盤 ${MKT_LAST||'尚無'}`;
   $('sheetBg').style.display='block';$('sheet').style.display='block';
 }
