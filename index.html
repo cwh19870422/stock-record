@@ -118,6 +118,50 @@ nav button.on{color:var(--accent);font-weight:700}
 #login{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;align-items:center;justify-content:center;padding:24px}
 #login .box{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
 #login h2{margin:0 0 4px;color:var(--accent)}
+/* ===== 筆記 ===== */
+.fbar{position:sticky;top:calc(50px + env(safe-area-inset-top));z-index:15;background:var(--bg);margin:-14px -14px 0;padding:10px 14px 8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.fbar::-webkit-scrollbar{display:none}
+.fchip{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 13px;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;transition:.15s}
+.fchip b{font-weight:500;font-size:12px;opacity:.7;margin-left:3px}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.fchip.drop-on{background:#ffe9b8;border-color:#f5a524;color:var(--ink);transform:scale(1.08)}
+.fchip.tool{border-style:dashed;color:var(--accent)}
+.tagbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ntag{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 9px;font-size:13px;color:var(--sub);cursor:pointer}
+.ntag.on{background:var(--accent2);border-color:var(--accent);color:var(--accent);font-weight:600}
+.nlist{padding:10px 0 90px}
+.nc{background:#fff;border-radius:14px;padding:12px 14px 10px 8px;margin-bottom:10px;display:flex;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.nc.dragging,.frow.dragging{opacity:.35}
+.nc.ins-before,.frow.ins-before{box-shadow:0 -3px 0 var(--accent)}
+.nc.ins-after,.frow.ins-after{box-shadow:0 3px 0 var(--accent)}
+.handle{flex:0 0 26px;display:flex;align-items:flex-start;justify-content:center;color:#b6bcc8;font-size:18px;cursor:grab;touch-action:none;user-select:none;padding-top:2px}
+.nbody{flex:1;min-width:0}
+.ntop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.nfolder{font-size:12px;color:var(--sub)}
+.starbtn{border:0;background:none;font-size:20px;cursor:pointer;color:#cfd3db;padding:0;line-height:1}
+.starbtn.on{color:#f5a524}
+.ntext{white-space:pre-wrap;line-height:1.65;font-size:15.5px;word-break:break-word}
+.ntext.clamp{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.nmore{font-size:13px;color:var(--accent);cursor:pointer;margin-top:4px;display:none}
+.nimgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.nimgs img{width:76px;height:76px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;background:#eef0f4}
+.ntags{margin-top:8px;display:flex;gap:4px;flex-wrap:wrap}
+.ntags span{font-size:12px;background:#f1f3f6;color:var(--sub);padding:2px 7px;border-radius:5px}
+.ghostcard{position:fixed;z-index:100;pointer-events:none;opacity:.92;box-shadow:0 10px 30px rgba(0,0,0,.2);transform:rotate(1.5deg)}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;border:0;background:var(--accent);color:#fff;border-radius:99px;padding:14px 20px;font-size:16px;font-weight:700;box-shadow:0 6px 18px rgba(31,58,95,.35);cursor:pointer;display:none}
+.edimgs{display:flex;gap:8px;flex-wrap:wrap}
+.edimg{position:relative}
+.edimg img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.edimg button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--up);color:#fff;font-size:13px;cursor:pointer}
+.addimg{width:84px;height:84px;border:1.5px dashed #b6bcc8;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--sub);font-size:12px;cursor:pointer;gap:2px}
+.addimg span{font-size:24px}
+.starrow{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:15px;cursor:pointer;user-select:none}
+.frow{display:flex;align-items:center;gap:8px;padding:10px 4px;border-bottom:1px solid var(--line);background:#fff}
+.frow .nm{flex:1}
+.frow button{border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer}
+.frow button.del{color:var(--up)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:90;display:none;align-items:center;justify-content:center}
+.viewer img{max-width:100%;max-height:100%}
 #loading{position:fixed;inset:0;background:var(--bg);z-index:95;display:flex;align-items:center;justify-content:center;color:var(--sub)}
 </style>
 </head>
@@ -247,11 +291,21 @@ nav button.on{color:var(--accent);font-weight:700}
       </div>
       <div id="viewList"></div>
     </section>
+
+    <!-- 筆記頁 -->
+    <section id="pg-note" style="display:none">
+      <div class="fbar" id="fbar"></div>
+      <input id="nq" placeholder="🔍 搜尋筆記內容、標籤…" oninput="renderNotes()" style="margin-top:4px">
+      <div class="tagbar" id="tagbar"></div>
+      <div class="nlist" id="nlist"></div>
+    </section>
   </main>
+  <button class="fab" id="fab" onclick="openNote()">＋ 新增筆記</button>
 
   <nav><div class="in">
     <button id="nav-rec" class="on" onclick="go('rec')"><span class="i">✏️</span>記錄</button>
     <button id="nav-view" onclick="go('view')"><span class="i">📊</span>觀看</button>
+    <button id="nav-note" onclick="go('note')"><span class="i">📒</span>筆記</button>
   </div></nav>
 </div>
 
@@ -279,10 +333,38 @@ nav button.on{color:var(--accent);font-weight:700}
   <button class="btn ghost" onclick="exportData()">⬇️ 匯出備份（JSON）</button>
   <button class="btn ghost" onclick="document.getElementById('impFile').click()">⬆️ 匯入備份</button>
   <input type="file" id="impFile" accept=".json,application/json" style="display:none" onchange="importData(this)">
-  <div class="note" style="margin-top:6px">匯入以雲端為準：只補回雲端沒有的紀錄，已有的不會被覆蓋。</div>
+  <div class="note" style="margin-top:6px">匯入以雲端為準：只補回雲端沒有的紀錄，已有的不會被覆蓋。備份含筆記文字，不含圖片。</div>
   <button class="btn ghost" style="color:var(--up)" onclick="logout()">登出</button>
   <button class="btn" onclick="closeSheet()">完成</button>
 </div>
+
+<!-- 筆記：新增／修改 -->
+<div class="sheet-bg" id="nedBg" style="z-index:50" onclick="closeNS('ned')"></div>
+<div class="sheet" id="nedSheet" style="z-index:51">
+  <h3 id="nedTitle">新增筆記</h3>
+  <label class="f">內容</label>
+  <textarea id="nedText" style="min-height:120px;line-height:1.6" placeholder="例如：「停損是保險，不是失敗。」"></textarea>
+  <label class="f">圖片</label>
+  <div class="edimgs" id="nedImgs"></div>
+  <input type="file" id="nImgFile" accept="image/*" multiple style="display:none" onchange="addNImgs(this)">
+  <label class="f">資料夾</label>
+  <div class="chips" id="nedFolders"></div>
+  <label class="f">標籤</label>
+  <div class="chips" id="nedTags"></div>
+  <input id="nedTagIn" placeholder="輸入新標籤後按 Enter" style="margin-top:8px" onkeydown="if(event.key==='Enter'){event.preventDefault();addNTag()}">
+  <div class="starrow" onclick="NED.star=!NED.star;renderNEd()"><span id="nedStar" style="font-size:22px">☆</span> 標成重要（打星號）</div>
+  <div class="row"><button class="btn ghost" onclick="closeNS('ned')">取消</button><button class="btn" id="nedSave" onclick="saveNote()">儲存</button></div>
+</div>
+<!-- 筆記：管理資料夾 -->
+<div class="sheet-bg" id="nfmBg" style="z-index:50" onclick="closeNS('nfm')"></div>
+<div class="sheet" id="nfmSheet" style="z-index:51">
+  <h3>管理資料夾</h3>
+  <div class="note">拖曳 ⋮⋮ 可以調整順序</div>
+  <div id="nfmList" style="margin-top:8px"></div>
+  <button class="btn ghost" onclick="addFolder()">＋ 新增資料夾</button>
+  <button class="btn" onclick="closeNS('nfm')">完成</button>
+</div>
+<div class="viewer" id="viewer" onclick="this.style.display='none'"><img id="viewImg"></div>
 
 <!-- 編輯紀錄 -->
 <div class="sheet" id="editSheet" style="z-index:61"></div>
@@ -307,6 +389,8 @@ nav button.on{color:var(--accent);font-weight:700}
 const DEF_SET={disc:0.28,min:20,bondTax:0,stopPct:5,targetPct:10,tags:["短線","波段","存股","題材","跟單"],
   reasons:{buy:["財報／法說佳","技術面突破","回檔加碼","定期存股","題材發酵","領股息","營收成長","別人推薦"],
            sell:["達目標價","跌破停損","獲利了結","換股","需要資金","題材結束","基本面轉差"]}};
+const DEF_FOLDERS=[{id:'f1',name:'經典名句'},{id:'f2',name:'注意事項'},{id:'f3',name:'操作心法'}];
+let NOTES=[], FOLDERS=null, IMGC={}, nCur='all', nTag=null;
 let STOCKS=[], SMAP={}, PRICES={date:'',p:{}}, MKT={}, MKT_LAST='', AUTO={};
 let DB={buys:[],sells:[],set:JSON.parse(JSON.stringify(DEF_SET))};
 let fb=null, uid=null, unsub=[];
@@ -352,11 +436,12 @@ function start(u){
   const st=s=>{$('syncState').textContent=s.metadata.hasPendingWrites?'同步中…':(s.metadata.fromCache?'離線':'已同步')};
   unsub.push(U().collection('buys').onSnapshot(s=>{DB.buys=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
   unsub.push(U().collection('sells').onSnapshot(s=>{DB.sells=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
-  unsub.push(U().onSnapshot(d=>{const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
+  unsub.push(U().collection('notes').onSnapshot(s=>{NOTES=s.docs.map(d=>({...d.data(),id:d.id}));refresh()}));
+  unsub.push(U().onSnapshot(d=>{const nf=d.data()&&d.data().noteFolders;FOLDERS=nf||JSON.parse(JSON.stringify(DEF_FOLDERS));const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
   unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
   $('bDate').value=nowLocal(); refresh();
 }
-let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView()},30)}
+let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView();if($('pg-note').style.display!=='none')renderNotes()},30)}
 
 // 寫入：買賣紀錄 + 排入新聞佇列
 function saveRec(k,o){
@@ -437,8 +522,9 @@ function compute(extraSell){
 
 // ================= 導覽 =================
 function go(p){
-  ['rec','view'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
-  if(p==='view')renderView();else renderSellHolds();
+  ['rec','view','note'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
+  $('fab').style.display=p==='note'?'block':'none';
+  if(p==='view')renderView();else if(p==='note')renderNotes();else renderSellHolds();
   window.scrollTo(0,0);
 }
 function setMode(m){
@@ -692,6 +778,164 @@ let inCb=null;
 function askIn(title,val,cb){$('inTitle').textContent=title;$('inVal').value=val;$('inModal').style.display='flex';inCb=cb;setTimeout(()=>$('inVal').focus(),50)}
 function inDone(ok){const v=$('inVal').value.trim();$('inModal').style.display='none';if(ok&&v&&inCb)inCb(v);inCb=null}
 
+// ================= 筆記 =================
+const folders=()=>FOLDERS||DEF_FOLDERS;
+function folderName(id){const f=folders().find(x=>x.id===id);return f?f.name:'未分類'}
+const inNone=n=>!n.folder||!folders().find(f=>f.id===n.folder);
+function renderNotes(){
+  const cnt=id=>NOTES.filter(n=>id==='all'?1:id==='star'?n.star:id===''?inNone(n):n.folder===id).length;
+  const items=[{id:'all',name:'全部'},{id:'star',name:'⭐ 重要'},...folders(),...(NOTES.some(inNone)?[{id:'',name:'未分類'}]:[])];
+  if(!items.find(f=>f.id===nCur))nCur='all';
+  $('fbar').innerHTML=items.map(f=>`<button class="fchip ${nCur===f.id?'on':''}" data-drop-folder="${f.id}" onclick="nCur='${f.id}';renderNotes()">${esc(f.name)}<b>${cnt(f.id)}</b></button>`).join('')
+    +`<button class="fchip tool" onclick="openFolders()">✎ 資料夾</button>`;
+  const tags=[...new Set(NOTES.flatMap(n=>n.tags||[]))].sort();
+  if(nTag&&!tags.includes(nTag))nTag=null;
+  $('tagbar').innerHTML=tags.map(t=>`<span class="ntag ${nTag===t?'on':''}" data-t="${esc(t)}" onclick="nTag=nTag===this.dataset.t?null:this.dataset.t;renderNotes()">#${esc(t)}</span>`).join('');
+  const q=$('nq').value.trim().toLowerCase();
+  const list=NOTES.filter(n=>(nCur==='all'||(nCur==='star'?n.star:nCur===''?inNone(n):n.folder===nCur))
+    &&(!nTag||(n.tags||[]).includes(nTag))&&(!q||(n.text||'').toLowerCase().includes(q)||(n.tags||[]).some(t=>t.toLowerCase().includes(q))))
+    .sort((a,b)=>(a.order??0)-(b.order??0));
+  $('nlist').innerHTML=list.length?list.map(n=>`<div class="nc" data-id="${n.id}">
+    <div class="handle" onpointerdown="startDrag(event,'note','${n.id}')">⋮⋮</div>
+    <div class="nbody">
+      <div class="ntop"><span class="nfolder">📁 ${esc(folderName(n.folder))}</span><button class="starbtn ${n.star?'on':''}" onclick="toggleStar('${n.id}')">${n.star?'★':'☆'}</button></div>
+      <div class="ntext clamp">${esc(n.text||'')}</div><div class="nmore" onclick="this.previousElementSibling.classList.toggle('clamp');this.textContent=this.textContent==='展開全文 ▾'?'收合 ▴':'展開全文 ▾'">展開全文 ▾</div>
+      ${(n.imgs||[]).length?`<div class="nimgs">${n.imgs.map(i=>`<img data-img="${i}" ${IMGC[i]?`src="${IMGC[i]}"`:''} onclick="viewImg('${i}')">`).join('')}</div>`:''}
+      ${(n.tags||[]).length?`<div class="ntags">${n.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>`:''}
+      <div class="acts"><button onclick="openNote('${n.id}')">✎ 修改</button><button onclick="copyNote('${n.id}')">⧉ 複製</button><button onclick="delNote('${n.id}')">刪除</button></div>
+    </div></div>`).join('')
+    :`<div class="empty">${NOTES.length?'這裡還沒有筆記':'還沒有任何筆記<br>按右下角「＋ 新增筆記」開始記錄'}</div>`;
+  document.querySelectorAll('#nlist .ntext').forEach(el=>{if(el.scrollHeight>el.clientHeight+2)el.nextElementSibling.style.display='block'});
+  loadImgs();
+}
+// 圖片分開存（users/{uid}/noteImgs），需要時才讀取
+async function getImg(id){
+  if(IMGC[id])return IMGC[id];
+  try{const d=await U().collection('noteImgs').doc(id).get();if(d.exists)IMGC[id]=d.data().data}catch(e){}
+  return IMGC[id];
+}
+function loadImgs(){document.querySelectorAll('img[data-img]:not([src])').forEach(async el=>{const s=await getImg(el.dataset.img);if(s)el.src=s})}
+async function viewImg(id){const s=await getImg(id);if(s){$('viewImg').src=s;$('viewer').style.display='flex'}}
+function toggleStar(id){const n=NOTES.find(x=>x.id===id);U().collection('notes').doc(id).update({star:!n.star})}
+function copyNote(id){const n=NOTES.find(x=>x.id===id);navigator.clipboard.writeText(n.text||'').then(()=>toast('已複製')).catch(()=>toast('無法複製'))}
+function askCf(msg,cb){$('cfMsg').innerHTML=msg;$('cfOk').textContent='刪除';$('confirm').style.display='flex';cfCb=cb}
+function delNote(id){askCf('確定刪除這則筆記？刪除後無法復原。',async()=>{
+  const n=NOTES.find(x=>x.id===id),b=fb.db.batch();
+  b.delete(U().collection('notes').doc(id));(n.imgs||[]).forEach(i=>b.delete(U().collection('noteImgs').doc(i)));
+  await b.commit().then(()=>toast('已刪除')).catch(e=>toast('刪除失敗：'+e.message));
+})}
+
+// ---- 拖曳：筆記排序／拖到資料夾／資料夾排序 ----
+function startDrag(e,kind,id){
+  e.preventDefault();
+  const el=e.target.closest(kind==='note'?'.nc':'.frow'),r=el.getBoundingClientRect();
+  const g=el.cloneNode(true);g.classList.add('ghostcard');Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px'});
+  document.body.appendChild(g);el.classList.add('dragging');
+  const ox=e.clientX-r.left,oy=e.clientY-r.top;let target=null,lastY=e.clientY,lastX=e.clientX;
+  const clear=()=>document.querySelectorAll('.ins-before,.ins-after,.drop-on').forEach(x=>x.classList.remove('ins-before','ins-after','drop-on'));
+  const move=ev=>{
+    lastY=ev.clientY;lastX=ev.clientX;g.style.left=ev.clientX-ox+'px';g.style.top=ev.clientY-oy+'px';
+    g.style.display='none';const u=document.elementFromPoint(ev.clientX,ev.clientY);g.style.display='';
+    clear();target=null;if(!u)return;
+    const f=kind==='note'&&u.closest('[data-drop-folder]');
+    const c=u.closest(kind==='note'?'.nc[data-id]':'.frow[data-fid]');
+    if(f&&f.dataset.dropFolder!=='all'){f.classList.add('drop-on');target={folder:f.dataset.dropFolder}}
+    else if(c&&(c.dataset.id||c.dataset.fid)!==id){const rr=c.getBoundingClientRect(),before=ev.clientY<rr.top+rr.height/2;c.classList.add(before?'ins-before':'ins-after');target={id:c.dataset.id||c.dataset.fid,before}}
+  };
+  const timer=setInterval(()=>{
+    const fbr=$('fbar').getBoundingClientRect();
+    if(kind==='note'&&lastY>=fbr.top&&lastY<=fbr.bottom){if(lastX>innerWidth-50)$('fbar').scrollLeft+=10;else if(lastX<50)$('fbar').scrollLeft-=10;return}
+    const sc=kind==='note'?window:$('nfmSheet');if(lastY<(kind==='note'?fbr.top-10:130))sc.scrollBy(0,-12);else if(lastY>innerHeight-130)sc.scrollBy(0,12)},30);
+  const up=()=>{
+    removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
+    clearInterval(timer);clear();g.remove();el.classList.remove('dragging');
+    if(!target)return;
+    if(kind==='note'){
+      const ref=U().collection('notes').doc(id);
+      if(target.folder!==undefined){
+        if(target.folder==='star'){ref.update({star:true});toast('已標成重要')}
+        else{ref.update({folder:target.folder});toast('已移到「'+folderName(target.folder)+'」')}
+      }else{
+        // 只改被拖的那一則：排序值取前後兩則的中間
+        const all=[...NOTES].sort((a,b)=>(a.order??0)-(b.order??0)).filter(x=>x.id!==id);
+        let j=all.findIndex(x=>x.id===target.id);if(!target.before)j++;
+        const prev=all[j-1],next=all[j];
+        const o=prev&&next?((prev.order??0)+(next.order??0))/2:prev?(prev.order??0)+1:next?(next.order??0)-1:0;
+        NOTES.find(x=>x.id===id).order=o;renderNotes();ref.update({order:o});
+      }
+    }else{
+      const arr=[...folders()],i=arr.findIndex(x=>x.id===id),it=arr.splice(i,1)[0];
+      let j=arr.findIndex(x=>x.id===target.id);if(!target.before)j++;arr.splice(j,0,it);
+      saveFolders(arr);
+    }
+  };
+  addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up);
+}
+
+// ---- 資料夾 ----
+function saveFolders(arr){FOLDERS=arr;renderFolders();renderNotes();U().set({noteFolders:arr},{merge:true})}
+function openFolders(){renderFolders();$('nfmBg').style.display='block';$('nfmSheet').style.display='block'}
+function renderFolders(){
+  $('nfmList').innerHTML=folders().map(f=>`<div class="frow" data-fid="${f.id}"><div class="handle" onpointerdown="startDrag(event,'folder','${f.id}')">⋮⋮</div>
+   <span class="nm">📁 ${esc(f.name)} <span class="note">${NOTES.filter(n=>n.folder===f.id).length} 則</span></span>
+   <button onclick="renFolder('${f.id}')">改名</button><button class="del" onclick="delFolder('${f.id}')">刪除</button></div>`).join('')||'<div class="empty">還沒有資料夾</div>';
+}
+function addFolder(cb){askIn('新增資料夾','',v=>{const id=uid8();saveFolders([...folders(),{id,name:v}]);if(cb)cb(id)})}
+function renFolder(id){const f=folders().find(x=>x.id===id);askIn('資料夾改名',f.name,v=>saveFolders(folders().map(x=>x.id===id?{...x,name:v}:x)))}
+function delFolder(id){const f=folders().find(x=>x.id===id),ns=NOTES.filter(x=>x.folder===id);
+  askCf(`刪除資料夾「${esc(f.name)}」？${ns.length?`<br>裡面的 ${ns.length} 則筆記不會刪除，會移到「未分類」。`:''}`,()=>{
+    const b=fb.db.batch();ns.forEach(n=>b.update(U().collection('notes').doc(n.id),{folder:''}));b.commit();
+    if(nCur===id)nCur='all';saveFolders(folders().filter(x=>x.id!==id));
+  })}
+
+// ---- 新增／修改筆記 ----
+let NED=null;
+function openNote(id){
+  const n=id?NOTES.find(x=>x.id===id):null;
+  NED={id:n?n.id:null,folder:n?(n.folder||''):(['all','star'].includes(nCur)?(folders()[0]||{}).id||'':nCur),
+    tags:new Set(n?n.tags||[]:(nTag?[nTag]:[])),star:n?!!n.star:nCur==='star',imgs:n?(n.imgs||[]).map(i=>({id:i,src:IMGC[i]||''})):[],orig:n?(n.imgs||[]):[]};
+  $('nedTitle').textContent=n?'修改筆記':'新增筆記';$('nedText').value=n?n.text||'':'';$('nedTagIn').value='';
+  renderNEd();$('nedBg').style.display='block';$('nedSheet').style.display='block';$('nedSheet').scrollTop=0;
+  NED.imgs.forEach(async m=>{if(!m.src){m.src=await getImg(m.id)||'';renderNEd()}});
+}
+function renderNEd(){
+  $('nedImgs').innerHTML=NED.imgs.map((m,i)=>`<div class="edimg"><img ${m.src?`src="${m.src}"`:''}><button onclick="NED.imgs.splice(${i},1);renderNEd()">✕</button></div>`).join('')
+    +`<div class="addimg" onclick="$('nImgFile').click()"><span>＋</span>加圖片</div>`;
+  $('nedFolders').innerHTML=[...folders(),{id:'',name:'未分類'}].map(f=>`<button class="chip ${NED.folder===f.id?'on':''}" onclick="NED.folder='${f.id}';renderNEd()">${esc(f.name)}</button>`).join('')
+    +`<button class="chip" style="border-style:dashed;color:var(--accent)" onclick="addFolder(id=>{NED.folder=id;renderNEd()})">＋ 新資料夾</button>`;
+  const all=[...new Set([...NOTES.flatMap(n=>n.tags||[]),...NED.tags])].sort();
+  $('nedTags').innerHTML=all.map(t=>`<button class="chip ${NED.tags.has(t)?'on':''}" data-t="${esc(t)}" onclick="NED.tags.has(this.dataset.t)?NED.tags.delete(this.dataset.t):NED.tags.add(this.dataset.t);renderNEd()">#${esc(t)}</button>`).join('')||'<span class="note">還沒有標籤，在下面輸入新增</span>';
+  $('nedStar').textContent=NED.star?'★':'☆';$('nedStar').style.color=NED.star?'#f5a524':'#b6bcc8';
+}
+function addNTag(){const v=$('nedTagIn').value.replace(/^#/,'').trim();if(v){NED.tags.add(v);$('nedTagIn').value='';renderNEd()}}
+async function addNImgs(inp){
+  for(const f of inp.files){try{NED.imgs.push({id:null,src:await compressImg(f)})}catch(e){toast('有圖片無法讀取')}}
+  inp.value='';renderNEd();
+}
+// 壓縮：最長邊 1280px、JPEG 0.75（太大再降畫質，確保單張小於 Firestore 1MB 上限）
+function compressImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const s=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
+    let q=.75,d=c.toDataURL('image/jpeg',q);while(d.length>900000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}res(d)};
+  im.onerror=rej;im.src=u})}
+async function saveNote(){
+  addNTag();const text=$('nedText').value.trim();
+  if(!text&&!NED.imgs.length)return toast('請輸入內容或加一張圖片');
+  $('nedSave').disabled=true;
+  try{
+    const b=fb.db.batch(),imgs=[];
+    for(const m of NED.imgs){if(m.id){imgs.push(m.id);continue}const id=uid8();IMGC[id]=m.src;b.set(U().collection('noteImgs').doc(id),{data:m.src});imgs.push(id)}
+    NED.orig.filter(i=>!imgs.includes(i)).forEach(i=>b.delete(U().collection('noteImgs').doc(i)));
+    const data={text,folder:NED.folder,tags:[...NED.tags],star:NED.star,imgs,updated:Date.now()};
+    if(NED.id)b.update(U().collection('notes').doc(NED.id),data);
+    else{const mn=NOTES.reduce((a,n)=>Math.min(a,n.order??0),1);b.set(U().collection('notes').doc(uid8()),{...data,order:mn-1,created:Date.now()})}
+    const wasEdit=!!NED.id;closeNS('ned');
+    await b.commit();toast(wasEdit?'已更新':'已新增');
+  }catch(e){toast('儲存失敗：'+e.message)}
+  $('nedSave').disabled=false;
+}
+function closeNS(k){$(k+'Bg').style.display='none';$(k+'Sheet').style.display='none'}
+
 // ================= 設定／備份 =================
 function openSheet(){
   $('setDisc').value=DB.set.disc;$('setMin').value=DB.set.min;$('setBond').value=DB.set.bondTax||0;$('setStop').value=DB.set.stopPct??5;$('setTarget').value=DB.set.targetPct??10;
@@ -701,7 +945,7 @@ function openSheet(){
 function closeSheet(){$('sheetBg').style.display='none';$('sheet').style.display='none';calcBuy();calcSell()}
 function exportData(){
   const strip=a=>a.map(({fee,...x})=>x);
-  const blob=new Blob([JSON.stringify({app:'stock-record',exported:new Date().toISOString(),buys:strip(DB.buys),sells:strip(DB.sells),set:DB.set},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'stock-record',exported:new Date().toISOString(),buys:strip(DB.buys),sells:strip(DB.sells),set:DB.set,notes:NOTES,noteFolders:folders()},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='股票記錄備份_'+new Date().toISOString().slice(0,10)+'.json';a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
@@ -714,7 +958,10 @@ function importData(inp){
       const batch=fb.db.batch();
       nb.forEach(({id,fee,...x})=>batch.set(U().collection('buys').doc(id),x));
       ns.forEach(({id,fee,...x})=>batch.set(U().collection('sells').doc(id),x));
-      await batch.commit();toast(`已匯入 ${nb.length} 筆買進、${ns.length} 筆賣出`);
+      const hn=new Set(NOTES.map(x=>x.id)),nn=(d.notes||[]).filter(x=>x.id&&!hn.has(x.id));
+      nn.forEach(({id,...x})=>batch.set(U().collection('notes').doc(id),{...x,imgs:[]}));
+      if(d.noteFolders&&!FOLDERS)batch.set(U(),{noteFolders:d.noteFolders},{merge:true});
+      await batch.commit();toast(`已匯入 ${nb.length} 筆買進、${ns.length} 筆賣出、${nn.length} 則筆記`);
     }catch(e){toast('匯入失敗：'+e.message)}
     inp.value='';
   };
