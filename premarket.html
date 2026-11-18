@@ -140,6 +140,24 @@ function minik(item, h = 190, n = 30, opt = {}) {
   [[0, 'start'], [Math.floor(B.length / 2), 'middle'], [B.length - 1, 'end']].forEach(([i, a]) => s += `<text x="${a === 'start' ? 0 : a === 'end' ? W - R : i * cw + cw / 2}" y="${h - 3}" font-size="9" text-anchor="${a}" fill="#93a3bf">${md(B[i][0])}</text>`);
   return s + `</svg><div class="note" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>${MA.map(m => `<span style="color:${m.c}">${m.dash ? '┅' : '━'}${m.k}MA</span>`).join(' ')}　近 ${n} 天</span><span style="color:var(--blue)">點圖看 KD、MACD →</span></div></a>`;
 }
+// 分開小圖：每個項目一排、各自比例尺；實心＝買超、淡色＝賣超
+function multi(dates, rows, unit = '') {
+  const W = 340, L = 46, n = dates.length, cw = (W - L) / n, rh = 78;
+  let s = `<svg class="bars" viewBox="0 0 ${W} ${rows.length * rh + 18}">`;
+  rows.forEach(([name, vals, c], j) => {
+    const y0 = j * rh, ok = vals.filter(v => v != null), pos = Math.max(0, ...ok), neg = Math.max(0, ...ok.map(v => -v)), k = (rh - 30) / ((pos + neg) || 1), mid = y0 + 14 + pos * k;
+    s += `<text x="0" y="${mid + 4}" font-size="12" font-weight="600" fill="${c}">${name}</text>`;
+    s += `<line x1="${L}" x2="${W}" y1="${mid}" y2="${mid}" stroke="#26375a"/>`;
+    vals.forEach((v, i) => {
+      if (v == null) return;
+      const h = Math.max(1.5, Math.abs(v) * k), x = L + i * cw + cw * .18, w = cw * .64, buy = v >= 0;
+      s += `<rect x="${x}" y="${buy ? mid - h : mid}" width="${w}" height="${h}" rx="2" fill="${c}" fill-opacity="${buy ? 1 : .4}" stroke="${c}" stroke-width="${buy ? 0 : 1}"><title>${name} ${dates[i]}：${sg(v, 1)}${unit}</title></rect>`;
+      s += `<text x="${x + w / 2}" y="${buy ? mid - h - 3 : mid + h + 10}" font-size="8.5" text-anchor="middle" fill="${i === n - 1 ? '#e8eef8' : '#93a3bf'}">${fmt(v, 0)}</text>`;
+    });
+  });
+  s += `<line x1="0" x2="${W}" y1="${rows.length * rh}" y2="${rows.length * rh}" stroke="#26375a"/>` + dates.map((d, i) => `<text x="${L + i * cw + cw / 2}" y="${rows.length * rh + 12}" font-size="9" text-anchor="middle" fill="#93a3bf">${md(d)}</text>`).join('');
+  return s + `</svg><p class="note">實心＝買超、淡色框＝賣超｜每排各自比例，單位：${unit}</p>`;
+}
 function spark(vals) {
   const ok = vals.filter(v => v != null); if (ok.length < 2) return '';
   const W = 300, H = 40, mn = Math.min(...ok), mx = Math.max(...ok), r = mx - mn || 1;
@@ -233,7 +251,7 @@ async function main() {
   h += `<section id="inst"><h2>④ 三大法人現貨買賣超 ${tag(sig.inst[0], sig.inst[1])}</h2>
     <div class="big ${cls(fL.tot)}">${sg(fL.tot, 1)} 億</div>
     <div class="chips"><span class="chip">外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 1)}</span></span><span class="chip">投信 <span class="${cls(fL.it)}">${sg(fL.it, 1)}</span></span><span class="chip">自營商 <span class="${cls(fL.dl)}">${sg(fL.dl, 1)}</span></span></div>
-    ${bars(days, F.map(x => x.tot ?? null), 0, '億')}
+    ${multi(days, [['外資', F.map(x => x.fi ?? null), '#3987e5'], ['投信', F.map(x => x.it ?? null), '#eb6834'], ['自營商', F.map(x => x.dl ?? null), '#c3c2b7']], '億')}
     ${table(['日期', '外資', '投信', '自營商', '合計'], days.map((d, i) => [md(d), ...['fi', 'it', 'dl', 'tot'].map(k => `<span class="${cls(F[i][k])}">${sg(F[i][k], 1)}</span>`)]))}
     <div class="how"><b>怎麼看：</b>外資由賣轉買是好訊號；大跌日法人仍合計買超＝底層籌碼不壞；投信連續大買＝下檔有支撐。單日雜訊大，要看連續幾天的方向。</div></section>`;
 
