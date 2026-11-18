@@ -18,6 +18,12 @@ a{color:var(--blue);text-decoration:none;font-size:14px}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer}
 .tabs button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:700}
+.srch{display:flex;gap:6px;margin-top:8px;position:relative}
+.srch input{flex:1;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:16px}
+.srch button{background:var(--acc);color:#1a1a1a;border:0;border-radius:10px;padding:0 14px;font-weight:700;font-size:14px}
+.sug{position:absolute;left:0;right:60px;top:42px;background:#1d2c48;border:1px solid var(--line);border-radius:10px;z-index:9;max-height:260px;overflow:auto;display:none}
+.sug div{padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.sug div span{color:var(--mut);font-size:12px;margin-left:6px}
 .tabs .sep{flex:none;color:var(--mut);font-size:11px;align-self:center;padding:0 2px}
 main{max-width:900px;margin:0 auto;padding:10px}
 .head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -46,6 +52,7 @@ details.box[open]>summary::before{content:'▼ '}
 <body>
 <header>
   <div class="top"><h1>📈 K線技術分析</h1><a href="premarket.html">← 盤前看板</a></div>
+  <div class="srch"><input id="q" placeholder="查詢個股：輸入代號或名稱，例如 2330、長榮" autocomplete="off" enterkeyhint="search"><button id="go">查詢</button><div class="sug" id="sug"></div></div>
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
@@ -127,8 +134,17 @@ charts.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
 let DATA, cur;
 const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
 
-function show(id) {
-  const it = DATA.items.find(x => x.id === id) || DATA.items[0];
+let LIST = [];
+async function show(id) {
+  let it = DATA.items.find(x => x.id === id);
+  if (!it && id) {
+    try {
+      const o = await (await fetch(`k/${encodeURIComponent(id)}.json?t=${Date.now()}`)).json();
+      it = { id: o.c, name: `${o.n} ${o.c}`, group: 'stock', bars: o.b, market: o.m };
+    } catch { $('#info').innerHTML = `<span class="dn">找不到「${id}」的K線資料</span>（可能還在建立中，或代號有誤）`; return; }
+  }
+  it = it || DATA.items[0];
+  if (it.bars.length < 30) { $('#info').innerHTML = `<span class="dn">${it.name} 資料不足 30 天，無法計算指標</span>`; return; }
   cur = it; history.replaceState(null, '', '?s=' + it.id);
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.id === it.id));
   const B = it.bars, T = B.map(b => b[0]), O = B.map(b => b[1]), H = B.map(b => b[2]), L = B.map(b => b[3]), C = B.map(b => b[4]), V = B.map(b => b[5]);
@@ -197,6 +213,26 @@ document.querySelectorAll('details.box').forEach(d => {
   }).join('');
   $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.id); };
   show(new URLSearchParams(location.search).get('s') || 'TWII');
+  try { LIST = await (await fetch('k/list.json?t=' + Date.now())).json(); } catch {}
+  const q = $('#q'), sug = $('#sug');
+  const find = v => { v = v.trim(); if (!v) return []; const sc = x => x[0] === v || x[1] === v ? 0 : x[0].startsWith(v) || x[1].startsWith(v) ? 1 : 2; return LIST.filter(x => x[0].startsWith(v) || x[1].includes(v)).sort((a, b) => sc(a) - sc(b) || a[0].localeCompare(b[0])).slice(0, 30); };
+  const recentGet = () => { try { return JSON.parse(localStorage.getItem('ch-recent') || '[]'); } catch { return []; } };
+  const drawRecent = () => {
+    $('#recent')?.remove();
+    const r = recentGet().map(c => LIST.find(x => x[0] === c)).filter(Boolean);
+    if (r.length) $('#tabs').insertAdjacentHTML('afterbegin', `<span id="recent" style="display:contents"><span class="sep">最近</span>${r.map(x => `<button data-id="${x[0]}">${x[1]}</button>`).join('')}</span>`);
+  };
+  const pick = c => {
+    sug.style.display = 'none'; q.value = ''; q.blur(); show(c); window.scrollTo(0, 0);
+    if (LIST.some(x => x[0] === c)) { const r = [c, ...recentGet().filter(x => x !== c)].slice(0, 8); try { localStorage.setItem('ch-recent', JSON.stringify(r)); } catch {} drawRecent(); }
+  };
+  drawRecent();
+  q.oninput = () => { const r = find(q.value); sug.innerHTML = r.map(x => `<div data-c="${x[0]}">${x[0]} ${x[1]}<span>${x[2]}</span></div>`).join('') || (q.value.trim() ? '<div class="mut">找不到符合的股票</div>' : ''); sug.style.display = sug.innerHTML ? 'block' : 'none'; };
+  sug.onclick = e => { const d = e.target.closest('[data-c]'); if (d) pick(d.dataset.c); };
+  const go = () => { const v = q.value.trim(); if (!v) return; const r = find(v); pick(r.find(x => x[0] === v || x[1] === v)?.[0] || r[0]?.[0] || v); };
+  $('#go').onclick = go; q.onkeydown = e => { if (e.key === 'Enter') go(); };
+  document.addEventListener('click', e => { if (!e.target.closest('.srch')) sug.style.display = 'none'; });
+  q.placeholder = `查詢個股（共 ${LIST.length} 檔）：輸入代號或名稱`;
 })();
 </script>
 </body>
