@@ -51,7 +51,7 @@ details.box[open]>summary::before{content:'▼ '}
 <main>
   <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane"><div class="lbl"><i style="color:#f2b84b">━ 5MA</i><i style="color:#5aa9ff">━ 20MA</i><i style="color:#b48cff">━ 60MA</i></div><div id="main"></div></div>
+  <div class="pane"><div class="lbl"><i style="color:#f2b84b">━ 5MA</i><i style="color:#ff7eb6">━ 10MA</i><i style="color:#5aa9ff">━ 20MA</i><i style="color:#b48cff">━ 60MA</i></div><div id="main"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
   <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ DIF</i><i style="color:#5aa9ff">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
   <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
@@ -110,7 +110,7 @@ S.candle = cMain.addCandlestickSeries({ upColor: UP, downColor: DN, borderUpColo
 S.vol = cMain.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
 cMain.priceScale('vol').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
 const line = (c, color, w = 1.5) => c.addLineSeries({ color, lineWidth: w, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-S.ma5 = line(cMain, '#f2b84b'); S.ma20 = line(cMain, '#5aa9ff'); S.ma60 = line(cMain, '#b48cff');
+S.ma5 = line(cMain, '#f2b84b'); S.ma10 = line(cMain, '#ff7eb6'); S.ma20 = line(cMain, '#5aa9ff'); S.ma60 = line(cMain, '#b48cff');
 S.k = line(cKD, '#f2b84b', 2); S.d = line(cKD, '#5aa9ff', 2);
 S.k.createPriceLine({ price: 80, color: '#ff5a5a88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
 S.k.createPriceLine({ price: 20, color: '#2ecc7188', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
@@ -132,14 +132,14 @@ function show(id) {
   cur = it; history.replaceState(null, '', '?s=' + it.id);
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.id === it.id));
   const B = it.bars, T = B.map(b => b[0]), O = B.map(b => b[1]), H = B.map(b => b[2]), L = B.map(b => b[3]), C = B.map(b => b[4]), V = B.map(b => b[5]);
-  const m5 = sma(C, 5), m20 = sma(C, 20), m60 = sma(C, 60), K = kd(H, L, C), M = macd(C);
+  const m5 = sma(C, 5), m10 = sma(C, 10), m20 = sma(C, 20), m60 = sma(C, 60), K = kd(H, L, C), M = macd(C);
   const prec = C.at(-1) >= 1000 ? 0 : 2; P = prec;
   S.candle.applyOptions({ priceFormat: { type: 'price', precision: prec, minMove: prec ? 0.01 : 1 } });
   [S.dif, S.sig, S.osc].forEach(x => x.applyOptions({ priceFormat: { type: 'price', precision: prec ? 2 : 0, minMove: prec ? 0.01 : 1 } }));
   S.candle.setData(B.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
   const hasVol = V.some(v => v > 0);
   S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#ff5a5a55' : '#2ecc7155' } : { time: b[0] }));
-  S.ma5.setData(ser(T, m5)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
+  S.ma5.setData(ser(T, m5)); S.ma10.setData(ser(T, m10)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
   S.k.setData(ser(T, K.k)); S.d.setData(ser(T, K.d));
   S.dif.setData(ser(T, M.dif)); S.sig.setData(ser(T, M.sig));
   S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#ff5a5aaa' : '#2ecc71aa' })));
@@ -153,7 +153,7 @@ function show(id) {
   const info = j => {
     const c = B[j], up = c[4] >= c[1];
     $('#info').innerHTML = `<b>${c[0]}</b>　開 ${fmt(c[1])}　高 ${fmt(c[2])}　低 ${fmt(c[3])}　收 <b class="${up ? 'up' : 'dn'}">${fmt(c[4])}</b><br>
-      5MA ${fmt(m5[j])}　20MA ${fmt(m20[j])}　K ${fmt(K.k[j], 1)}　D ${fmt(K.d[j], 1)}　DIF ${fmt(M.dif[j])}　MACD ${fmt(M.sig[j])}　OSC <span class="${M.osc[j] >= 0 ? 'up' : 'dn'}">${fmt(M.osc[j])}</span>`;
+      5MA ${fmt(m5[j])}　10MA ${fmt(m10[j])}　20MA ${fmt(m20[j])}　K ${fmt(K.k[j], 1)}　D ${fmt(K.d[j], 1)}　DIF ${fmt(M.dif[j])}　MACD ${fmt(M.sig[j])}　OSC <span class="${M.osc[j] >= 0 ? 'up' : 'dn'}">${fmt(M.osc[j])}</span>`;
   };
   info(i);
   cMain.unsubscribeCrosshairMove(cMain._h || (() => {}));
