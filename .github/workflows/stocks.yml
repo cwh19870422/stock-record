@@ -1,0 +1,37 @@
+name: 全部個股K線更新
+
+on:
+  schedule:
+    - cron: '25 9 * * 1-5'   # 台北 17:25（週一～五）
+    - cron: '10 0 * * 1-5'   # 台北 08:10 補跑
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pm/stocks.mjs', '.github/workflows/stocks.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stocks
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 更新個股K線
+        run: node pm/stocks.mjs
+      - name: 存檔
+        run: |
+          git config user.name "stock-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add k
+          git diff --cached --quiet && exit 0
+          git commit -qm "個股K線 $(TZ=Asia/Taipei date '+%F %H:%M')"
+          for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep 8; done
