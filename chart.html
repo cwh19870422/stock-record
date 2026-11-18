@@ -56,7 +56,7 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span></div>
   <div class="info" id="info">載入中…</div>
   <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
@@ -71,6 +71,7 @@ details.box[open]>summary::before{content:'▼ '}
 <footer>資料：Yahoo Finance、期交所｜每天自動更新｜僅供參考，非投資建議</footer>
 
 <script src="pm/lwc.js"></script>
+<script src="pm/rt.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let P = 2;
@@ -135,12 +136,13 @@ let DATA, cur;
 const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
 
 let LIST = [];
-async function show(id) {
-  let it = DATA.items.find(x => x.id === id);
+const STK = {};
+async function show(id, keep = false) {
+  let it = DATA.items.find(x => x.id === id) || STK[id];
   if (!it && id) {
     try {
       const o = await (await fetch(`k/${encodeURIComponent(id)}.json?t=${Date.now()}`)).json();
-      it = { id: o.c, name: `${o.n} ${o.c}`, group: 'stock', bars: o.b, market: o.m };
+      it = STK[o.c] = { id: o.c, name: `${o.n} ${o.c}`, group: 'stock', bars: o.b, market: o.m };
     } catch { $('#info').innerHTML = `<span class="dn">找不到「${id}」的K線資料</span>（可能還在建立中，或代號有誤）`; return; }
   }
   it = it || DATA.items[0];
@@ -160,7 +162,7 @@ async function show(id) {
   S.dif.setData(ser(T, M.dif)); S.sig.setData(ser(T, M.sig));
   S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#ff5a5aaa' : '#2ecc71aa' })));
   const n = B.length, from = Math.max(0, n - 90);
-  charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
+  if (!keep) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
 
   const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
   $('#name').textContent = it.name;
@@ -234,6 +236,24 @@ document.querySelectorAll('details.box').forEach(d => {
   document.addEventListener('click', e => { if (!e.target.closest('.srch')) sug.style.display = 'none'; });
   q.placeholder = `查詢個股（共 ${LIST.length} 檔）：輸入代號或名稱`;
 })();
+// ---- 盤中即時：更新目前這檔的最後一根 K 棒 ----
+if (RT.on) setInterval(async () => {
+  if (!cur || !RT.stockLive()) { $('#live').textContent = ''; return; }
+  const top = (DATA?.items || []).filter(x => x.group === 'top5' || x.group === 'watch').map(x => x.id);
+  let code = null;
+  if (cur.id === 'TWII') code = 'tse_t00.tw';
+  else if (cur.group === 'stock') code = `${cur.market === '上櫃' ? 'otc' : 'tse'}_${cur.id}.tw`;
+  else if (top.includes(cur.id)) code = `tse_${cur.id}.tw`;
+  if (!code) { $('#live').textContent = ''; return; }
+  try {
+    const Q = await RT.q([code]), x = Object.values(Q)[0];
+    if (!x?.z || !x.d) return;
+    const B = cur.bars, bar = [x.d, x.o ?? x.z, x.h ?? x.z, x.l ?? x.z, x.z, x.v ?? (B.at(-1)[0] === x.d ? B.at(-1)[5] : 0)];
+    if (B.at(-1)[0] === x.d) B[B.length - 1] = bar; else if (B.at(-1)[0] < x.d) B.push(bar);
+    await show(cur.id, true);
+    $('#live').innerHTML = ` <span style="color:#ff5a5a">●</span> 即時 ${RT.hhmmss(x.t)}`;
+  } catch {}
+}, RT.every);
 </script>
 </body>
 </html>

@@ -79,11 +79,12 @@ details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 <body>
 <header>
   <div style="display:flex;justify-content:space-between;align-items:center"><h1>📊 盤前看板</h1><a href="chart.html" style="color:var(--blue);font-size:14px;text-decoration:none">📈 K線圖 →</a></div>
-  <div class="sub" id="upd">載入中…</div>
+  <div class="sub"><span id="upd">載入中…</span> <span id="live"></span></div>
 </header>
 <main id="app"></main>
 <footer>資料：證交所、期交所、Yahoo Finance｜每天 07:20、17:05、21:45 自動更新｜僅供參考，非投資建議</footer>
 
+<script src="pm/rt.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const fmt = (v, d = 0) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -251,7 +252,7 @@ async function main() {
     ['fut', '外資期貨淨未平倉', fmt(tL.net), `<span class="${cls(tL.chg)}">${sg(tL.chg)}口</span>`, sig.fut],
     ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
   ];
-  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s} ${tag(g[0], g[1])}</div></a>`).join('')}</div>`;
+  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s} ${tag(g[0], g[1])}</div></a>`).join('')}</div>`;
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
 
   // 1. 指數
@@ -312,7 +313,7 @@ async function main() {
     J.top5.list.forEach((s, k) => {
       const hs = days.map(d => s.hist[d] || {}), x = hs.findLast(v => v.c != null) || {}, fi = hs.at(-1)?.fi;
       h += `<div class="stock"><div><a class="n" style="color:inherit;text-decoration:none" href="chart.html?s=${s.code}">${k + 1}. ${s.name} <span class="kl">K線</span></a> <span class="w">${s.code}｜權重 ${fmt(s.w, 1)}%</span><div class="w">外資 <span class="${cls(fi)}">${sg(fi)}</span> 張</div></div>
-        <div class="px">${fmt(x.c, 1)}<div class="${cls(x.ch)}" style="font-size:13px">${sg(x.ch, 1)}（${sg(x.p, 2)}%）</div></div>
+        <div class="px" id="px-${s.code}">${fmt(x.c, 1)}<div class="${cls(x.ch)}" style="font-size:13px">${sg(x.ch, 1)}（${sg(x.p, 2)}%）</div></div>
         <div style="grid-column:1/3">${minik(kItem(s.code), 140, 20)}</div>
         </div>`;
     });
@@ -355,7 +356,9 @@ async function main() {
     sec.replaceWith(d);
   });
   sumLinks();
+  window.__SC = SC;
   if (SC) sectorInit(SC);
+  liveInit(J);
   $('#openAll').onclick = () => document.querySelectorAll('details.sec').forEach(d => d.open = true);
   $('#closeAll').onclick = () => document.querySelectorAll('details.sec').forEach(d => d.open = false);
   document.querySelectorAll('a.tile').forEach(a => a.addEventListener('click', () => { const d = document.querySelector(a.getAttribute('href')); if (d) d.open = true; }));
@@ -376,6 +379,7 @@ function heatColor(p, mx) {
   const t = Math.min(1, Math.abs(p) / mx), a = .28 + t * .72;
   return p > 0 ? `rgba(214,48,58,${a})` : p < 0 ? `rgba(30,150,90,${a})` : '#3a465c';
 }
+let sectorRedraw = () => {};
 function sectorInit(SC) {
   let mk = '上市', per = 'd', sel = null;
   const draw = () => {
@@ -398,10 +402,50 @@ function sectorInit(SC) {
   };
   const seg = (id, f) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); f(b.dataset.v); sel = null; draw(); };
   seg('#scM', v => mk = v); seg('#scP', v => per = v);
-  draw();
+  draw(); sectorRedraw = draw;
 }
 // 標題裡的 K線連結：點了直接開圖，不觸發收合
 function sumLinks() { document.querySelectorAll('summary a').forEach(a => a.addEventListener('click', e => e.stopPropagation())); }
+// ---- 盤中即時更新（需先設定 pm/rt.js 的轉接站網址）----
+const IDXN = { '01': '水泥工業', '02': '食品工業', '03': '塑膠工業', '04': '紡織纖維', '05': '電機機械', '06': '電器電纜', '08': '玻璃陶瓷', '09': '造紙工業', '10': '鋼鐵工業', '11': '橡膠工業', '12': '汽車工業', '14': '建材營造', '15': '航運業', '16': '觀光餐旅', '17': '金融保險', '18': '貿易百貨', '20': '其他', '21': '化學工業', '22': '生技醫療', '23': '油電燃氣', '24': '半導體業', '25': '電腦週邊', '26': '光電業', '27': '通信網路', '28': '電子零組件', '29': '電子通路', '30': '資訊服務', '31': '其他電子', '32': '文化創意' };
+function setTile(id, v, ch, unitPct, label) {
+  const t = $('#t-' + id); if (!t || v == null) return;
+  t.querySelector('.v').textContent = fmt(v, id === 'sox' ? 0 : 0);
+  const tg = t.querySelector('.s .tag'), up = ch > 0;
+  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${unitPct ? sg(ch, 2) + '%' : sg(ch)}</span> ${tg ? tg.outerHTML : ''}`;
+  if (label) t.querySelector('.k').innerHTML = label;
+}
+function liveInit(J) {
+  if (!RT.on) return;
+  const top = (J.top5?.list || []).map(s => s.code);
+  const tick = async () => {
+    const st = RT.stockLive(), fs = RT.futSession();
+    if (!st && fs == null) { $('#live').textContent = ''; return; }
+    try {
+      let t = '';
+      if (st) {
+        const codes = ['tse_t00.tw', 'otc_o00.tw', ...top.map(c => `tse_${c}.tw`), ...Object.keys(IDXN).flatMap(k => [`tse_t${k}.tw`, `otc_o${k}.tw`])];
+        const Q = await RT.q(codes);
+        const ix = Q.t00;
+        if (ix?.z) { setTile('idx', ix.z, ix.ch); t = ix.t; }
+        top.forEach(c => { const x = Q[c], el = $('#px-' + c); if (x?.z && el) el.innerHTML = `${fmt(x.z, 1)}<div class="${cls(x.ch)}" style="font-size:13px">${sg(x.ch, 1)}（${sg(x.p, 2)}%）</div>`; });
+        // 產業熱力圖「日」改成即時漲跌（方塊大小仍用前一天成交值）
+        const S = window.__SC;
+        if (S) for (const [mk, pre] of [['上市', 't'], ['上櫃', 'o']]) (S.markets[mk]?.d || []).forEach(g => {
+          const code = Object.keys(IDXN).find(k => IDXN[k] === g.name), x = code && Q[pre + code];
+          if (x?.p != null) { g.pct = Math.round(x.p * 100) / 100; g.live = true; }
+        });
+        sectorRedraw();
+      }
+      if (fs != null) {
+        const f = await RT.fut(fs);
+        if (f?.z) { setTile('night', f.z, f.ch, false, `${fs ? '台指期夜盤' : '台指期日盤'} <small>即時</small>`); t = t || RT.hhmmss(f.t); }
+      }
+      $('#live').innerHTML = `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}`;
+    } catch (e) { $('#live').innerHTML = '<span class="mut">即時連線失敗，稍後重試</span>'; }
+  };
+  tick(); setInterval(tick, RT.every);
+}
 main();
 </script>
 </body>
