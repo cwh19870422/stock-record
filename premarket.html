@@ -105,6 +105,12 @@ function bars(dates, vals, d = 0, unit = '') {
   return s + '</svg>';
 }
 // 迷你K線（近 30 天，含 5MA／20MA），點了到詳細K線頁
+// 美股開盤時間（自動判斷美國夏令／冬令時間）
+function usHours() {
+  const ny = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' }).formatToParts(new Date()).find(x => x.type === 'timeZoneName')?.value;
+  const dst = ny === 'EDT';
+  return `目前是<b>${dst ? '夏令' : '冬令'}時間</b>：${dst ? '21:30 ～ 隔天 04:00' : '22:30 ～ 隔天 05:00'}<br><span class="mut">夏令（3 月第二個週日～11 月第一個週日）21:30～04:00；冬令 22:30～05:00</span>`;
+}
 // 均線配色：色弱友善（黃／白／天藍／粉紫虛線），顏色＋線型雙重區分
 const MAS = [{ k: 5, c: '#F0E442', w: 1.6 }, { k: 10, c: '#FFFFFF', w: 1.1 }, { k: 20, c: '#3DA5FF', w: 2 }, { k: 60, c: '#CC79A7', w: 1.6, dash: true }];
 // 迷你K線（含成交量、5／10／20／60MA），點了到詳細K線頁
@@ -205,14 +211,14 @@ async function main() {
     <span class="chip">成交 ${fmt(ix.amt / 1e4, 2)} 兆</span></div>
     ${minik(kItem('TWII'))}
     ${table(['日期', '收盤', '漲跌', '5均', '月線', '成交(億)'], days.map((d, i) => [md(d), fmt(I[i].c), `<span class="${cls(I[i].ch)}">${sg(I[i].ch)}</span>`, fmt(I[i].ma5), fmt(I[i].ma20), fmt(I[i].amt)]))}
-    <div class="how"><b>怎麼看：</b>大跌但沒破5均＝正常拉回；跌破5均＝開始等第二隻腳。月線下彎時，指數靠近月線就是壓力，不追高。</div></section>`;
+</section>`;
 
   // 2. 夜盤
   h += `<section id="night"><h2>② 台指期夜盤 ${tag(sig.night[0], sig.night[1])} <a class="kl" href="chart.html?s=TXN">K線</a></h2>
     ${nL ? `<div class="big">${fmt(nL.c)}<small class="${cls(nL.ch)}">${sg(nL.ch)}（${sg(nL.p, 2)}%）</small></div><p class="note">${md(nL.d)} 盤前參考（${nL.m} 合約）</p>` : '<p class="note">尚無資料</p>'}
     ${minik(kItem('TXN'), 170, 30, { vol: false, ma: [5, 20] })}
     ${table(['盤前日', '夜盤收', '漲跌', '%'], N.map((x, i) => [md(x?.d || days[i]), fmt(x?.c), `<span class="${cls(x?.ch)}">${sg(x?.ch)}</span>`, sg(x?.p, 2)]))}
-    <div class="how"><b>怎麼看：</b>最直接預告今天開高或開低。夜盤大漲要防開高走低；遇到突發利空，看夜盤最後收在哪裡，急殺後拉回＝利空可能已提前反應。</div></section>`;
+    <div class="how"><b>交易時間（台灣時間）：</b>每天 15:00 ～ 隔天 05:00<br><span class="mut">白天盤 08:45～13:45 收盤後，下午 3 點開始夜盤</span></div></section>`;
 
   // 3. 美股
   const usL = k => lastOf(J.us[k]);
@@ -221,7 +227,7 @@ async function main() {
     <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = usL(k); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.p, 2)}%</span></span>`; }).join('')}</div>
     ${minik(kItem('SOX'), 170, 30, { ma: [5, 20] })}
     ${table(['美股日', '費半', '漲跌%'], S.map((x, i) => [md(x?.d || days[i]), fmt(x?.c, 2), `<span class="${cls(x?.p)}">${sg(x?.p, 2)}</span>`]))}
-    <div class="how"><b>怎麼看：</b>費半和台積電、台股連動最強。注意是「反彈後又跌」（趨勢偏弱）還是「止穩」；長下影線代表低檔有買盤。</div></section>`;
+    <div class="how"><b>美股交易時間（台灣時間）：</b>${usHours()}</div></section>`;
 
   // 4. 法人
   h += `<section id="inst"><h2>④ 三大法人現貨買賣超 ${tag(sig.inst[0], sig.inst[1])}</h2>
