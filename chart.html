@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>K線技術分析</title>
+<meta name="theme-color" content="#0f1a2e">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#0f1a2e;--card:#17243d;--line:#26375a;--tx:#e8eef8;--mut:#93a3bf;--up:#ff5a5a;--dn:#2ecc71;--acc:#f2b84b;--blue:#5aa9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:30px}
+header{position:sticky;top:0;z-index:5;background:rgba(15,26,46,.96);padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid var(--line)}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:18px}
+a{color:var(--blue);text-decoration:none;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:700}
+.tabs .sep{flex:none;color:var(--mut);font-size:11px;align-self:center;padding:0 2px}
+main{max-width:900px;margin:0 auto;padding:10px}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.head .n{font-size:20px;font-weight:800}
+.head .c{font-size:22px;font-weight:800}
+.up{color:var(--up)} .dn{color:var(--dn)} .mut{color:var(--mut)}
+.info{font-size:12px;color:var(--mut);min-height:36px;font-variant-numeric:tabular-nums;margin:4px 0}
+.info b{font-weight:600}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 4px 2px;margin-bottom:8px;position:relative}
+.pane .lbl{position:absolute;left:10px;top:4px;z-index:2;font-size:11px;color:var(--mut);pointer-events:none}
+.pane .lbl i{font-style:normal;margin-right:6px}
+#main{height:320px} #kd{height:130px} #macd{height:150px}
+.sig{background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:4px}
+.sig h3{margin:4px 0 6px;font-size:15px;color:var(--acc)}
+.sig ul{margin:0;padding-left:18px}
+.sig li{margin:3px 0}
+.how{font-size:13px;color:#c9d5ea;background:var(--card);border-radius:12px;padding:10px 12px;margin-top:8px}
+.how b{color:var(--acc)}
+footer{color:var(--mut);font-size:12px;text-align:center;padding:10px}
+details.box>summary{cursor:pointer;color:var(--mut);font-size:13px;padding:2px 6px;list-style:none}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary::before{content:'▶ ';font-size:10px}
+details.box[open]>summary::before{content:'▼ '}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>📈 K線技術分析</h1><a href="premarket.html">← 盤前看板</a></div>
+  <div class="tabs" id="tabs"></div>
+</header>
+<main>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span></div>
+  <div class="info" id="info">載入中…</div>
+  <div class="pane"><div class="lbl"><i style="color:#f2b84b">━ 5MA</i><i style="color:#5aa9ff">━ 20MA</i><i style="color:#b48cff">━ 60MA</i></div><div id="main"></div></div>
+  <details class="box pane" id="bKD" open><summary>KD 指標</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(9)</i><i style="color:#5aa9ff">━ D(9)</i></div><div id="kd"></div></div></details>
+  <details class="box pane" id="bMD" open><summary>MACD 指標</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ DIF</i><i style="color:#5aa9ff">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
+  <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
+  <details class="box how" id="bHow"><summary>指標怎麼看</summary>
+    <b>KD：</b>K 由下往上穿過 D＝黃金交叉（轉強），反之＝死亡交叉（轉弱）。K 在 80 以上＝過熱，20 以下＝超賣；低檔黃金交叉比高檔的更有參考性。<br>
+    <b>MACD：</b>柱狀體（OSC）由綠翻紅＝動能轉強，由紅翻綠＝動能轉弱。DIF 在 0 軸之上＝多方區，之下＝空方區。<br>
+    <b>均線：</b>收盤在 5MA 之上＝短線偏強；20MA（月線）下彎時是壓力。KD 反應快但容易鈍化，MACD 慢但較穩，兩者同方向時訊號較可靠。
+  </details>
+</main>
+<footer>資料：Yahoo Finance、期交所｜每天自動更新｜僅供參考，非投資建議</footer>
+
+<script src="pm/lwc.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let P = 2;
+const fmt = (v, d = P) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+const UP = '#ff5a5a', DN = '#2ecc71';
+const GROUP = { idx: '大盤', night: '大盤', us: '美股', top5: '權值股', watch: '自選' };
+
+// ---------- 指標計算 ----------
+function sma(c, n) { return c.map((_, i) => i + 1 < n ? null : c.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n); }
+function ema(c, n) { const k = 2 / (n + 1); let e = null; return c.map(v => (v == null ? e : (e = e == null ? v : v * k + e * (1 - k)))); }
+function kd(H, L, C, n = 9) {
+  let K = 50, D = 50; const k = [], d = [];
+  C.forEach((c, i) => {
+    if (i + 1 < n) { k.push(null); d.push(null); return; }
+    const hh = Math.max(...H.slice(i + 1 - n, i + 1)), ll = Math.min(...L.slice(i + 1 - n, i + 1));
+    const rsv = hh === ll ? 50 : (c - ll) / (hh - ll) * 100;
+    K = K * 2 / 3 + rsv / 3; D = D * 2 / 3 + K / 3; k.push(K); d.push(D);
+  });
+  return { k, d };
+}
+function macd(C) {
+  const e12 = ema(C, 12), e26 = ema(C, 26);
+  const dif = C.map((_, i) => e12[i] - e26[i]);
+  const sig = ema(dif, 9);
+  return { dif, sig, osc: dif.map((v, i) => v - sig[i]) };
+}
+
+// ---------- 圖表 ----------
+const base = {
+  autoSize: true,
+  layout: { background: { color: 'transparent' }, textColor: '#93a3bf', fontSize: 11 },
+  grid: { vertLines: { color: '#1f2e4a' }, horzLines: { color: '#1f2e4a' } },
+  rightPriceScale: { borderColor: '#26375a', minimumWidth: 64 },
+  timeScale: { borderColor: '#26375a', rightOffset: 3 },
+  crosshair: { mode: 0 },
+  localization: { locale: 'zh-TW', dateFormat: 'yyyy/MM/dd' },
+};
+const charts = [], S = {};
+function mk(id, extra = {}) { const c = LightweightCharts.createChart($(id), { ...base, ...extra }); charts.push(c); return c; }
+const cMain = mk('#main', { rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .12, bottom: .2 } } });
+const cKD = mk('#kd', { timeScale: { visible: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .15, bottom: .05 } } });
+const cMD = mk('#macd', { timeScale: { visible: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .15, bottom: .05 } } });
+S.candle = cMain.addCandlestickSeries({ upColor: UP, downColor: DN, borderUpColor: UP, borderDownColor: DN, wickUpColor: UP, wickDownColor: DN });
+S.vol = cMain.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+cMain.priceScale('vol').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
+const line = (c, color, w = 1.5) => c.addLineSeries({ color, lineWidth: w, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+S.ma5 = line(cMain, '#f2b84b'); S.ma20 = line(cMain, '#5aa9ff'); S.ma60 = line(cMain, '#b48cff');
+S.k = line(cKD, '#f2b84b', 2); S.d = line(cKD, '#5aa9ff', 2);
+S.k.createPriceLine({ price: 80, color: '#ff5a5a88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+S.k.createPriceLine({ price: 20, color: '#2ecc7188', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+S.osc = cMD.addHistogramSeries({ lastValueVisible: false, priceLineVisible: false });
+S.dif = line(cMD, '#f2b84b', 2); S.sig = line(cMD, '#5aa9ff', 2);
+
+// 三張圖同步捲動／縮放
+let syncing = false;
+charts.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
+  if (syncing || !r) return; syncing = true;
+  charts.forEach(o => o !== c && o.timeScale().setVisibleLogicalRange(r)); syncing = false;
+}));
+
+let DATA, cur;
+const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
+
+function show(id) {
+  const it = DATA.items.find(x => x.id === id) || DATA.items[0];
+  cur = it; history.replaceState(null, '', '?s=' + it.id);
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.id === it.id));
+  const B = it.bars, T = B.map(b => b[0]), O = B.map(b => b[1]), H = B.map(b => b[2]), L = B.map(b => b[3]), C = B.map(b => b[4]), V = B.map(b => b[5]);
+  const m5 = sma(C, 5), m20 = sma(C, 20), m60 = sma(C, 60), K = kd(H, L, C), M = macd(C);
+  const prec = C.at(-1) >= 1000 ? 0 : 2; P = prec;
+  S.candle.applyOptions({ priceFormat: { type: 'price', precision: prec, minMove: prec ? 0.01 : 1 } });
+  [S.dif, S.sig, S.osc].forEach(x => x.applyOptions({ priceFormat: { type: 'price', precision: prec ? 2 : 0, minMove: prec ? 0.01 : 1 } }));
+  S.candle.setData(B.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
+  const hasVol = V.some(v => v > 0);
+  S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#ff5a5a55' : '#2ecc7155' } : { time: b[0] }));
+  S.ma5.setData(ser(T, m5)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
+  S.k.setData(ser(T, K.k)); S.d.setData(ser(T, K.d));
+  S.dif.setData(ser(T, M.dif)); S.sig.setData(ser(T, M.sig));
+  S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#ff5a5aaa' : '#2ecc71aa' })));
+  const n = B.length, from = Math.max(0, n - 90);
+  charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
+
+  const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
+  $('#name').textContent = it.name;
+  $('#close').innerHTML = `<span class="${cl}">${fmt(C[i])}</span>`;
+  $('#chg').innerHTML = `<span class="${cl}">${ch >= 0 ? '▲' : '▼'}${fmt(Math.abs(ch))}（${p.toFixed(2)}%）</span> <span class="mut" style="font-size:12px">${T[i]}</span>`;
+  const info = j => {
+    const c = B[j], up = c[4] >= c[1];
+    $('#info').innerHTML = `<b>${c[0]}</b>　開 ${fmt(c[1])}　高 ${fmt(c[2])}　低 ${fmt(c[3])}　收 <b class="${up ? 'up' : 'dn'}">${fmt(c[4])}</b><br>
+      5MA ${fmt(m5[j])}　20MA ${fmt(m20[j])}　K ${fmt(K.k[j], 1)}　D ${fmt(K.d[j], 1)}　DIF ${fmt(M.dif[j])}　MACD ${fmt(M.sig[j])}　OSC <span class="${M.osc[j] >= 0 ? 'up' : 'dn'}">${fmt(M.osc[j])}</span>`;
+  };
+  info(i);
+  cMain.unsubscribeCrosshairMove(cMain._h || (() => {}));
+  cMain._h = prm => { const j = prm.time ? T.indexOf(prm.time) : -1; info(j >= 0 ? j : i); };
+  cMain.subscribeCrosshairMove(cMain._h);
+
+  // ---- 訊號判讀 ----
+  const out = [];
+  const k = K.k[i], d = K.d[i], k1 = K.k[i - 1], d1 = K.d[i - 1];
+  if (k > d && k1 <= d1) out.push(`<span class="up">KD 黃金交叉</span>${k < 30 ? '（低檔，較有參考性）' : k > 70 ? '（高檔，留意鈍化）' : ''}`);
+  else if (k < d && k1 >= d1) out.push(`<span class="dn">KD 死亡交叉</span>${k > 70 ? '（高檔，轉弱訊號較強）' : ''}`);
+  else out.push(`KD ${k > d ? '<span class="up">K 在 D 之上（偏多）</span>' : '<span class="dn">K 在 D 之下（偏空）</span>'}`);
+  if (k >= 80) out.push('<span class="up">K 值 80 以上，短線過熱</span>');
+  if (k <= 20) out.push('<span class="dn">K 值 20 以下，短線超賣</span>，等黃金交叉再看');
+  const o = M.osc[i], o1 = M.osc[i - 1];
+  if (o >= 0 && o1 < 0) out.push('<span class="up">MACD 柱狀體翻紅</span>，動能轉強');
+  else if (o < 0 && o1 >= 0) out.push('<span class="dn">MACD 柱狀體翻綠</span>，動能轉弱');
+  else if (o < 0) out.push(`MACD 柱狀體綠色${Math.abs(o) < Math.abs(o1) ? '<span class="up">縮小中</span>（跌勢減緩）' : '<span class="dn">擴大中</span>（跌勢加速）'}`);
+  else out.push(`MACD 柱狀體紅色${o > o1 ? '<span class="up">擴大中</span>（漲勢加速）' : '<span class="dn">縮小中</span>（漲勢減緩）'}`);
+  out.push(`DIF ${M.dif[i] >= 0 ? '<span class="up">在 0 軸之上（多方區）</span>' : '<span class="dn">在 0 軸之下（空方區）</span>'}`);
+  const m20up = m20[i] >= m20[i - 5];
+  out.push(`收盤${C[i] >= m5[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 5MA（${fmt(m5[i])}），${C[i] >= m20[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 20MA（${fmt(m20[i])}），20MA ${m20up ? '<span class="up">上彎</span>' : '<span class="dn">下彎</span>'}`);
+  const bull = [k > d, o >= 0, C[i] >= m5[i], C[i] >= m20[i]].filter(Boolean).length;
+  const verdict = bull >= 3 ? '<span class="up">技術面偏多</span>' : bull <= 1 ? '<span class="dn">技術面偏空</span>' : '多空拉鋸，等方向明確';
+  $('#sig').innerHTML = `<h3>📌 ${it.name} 技術訊號（${T[i]}）：${verdict}</h3><ul>${out.map(x => `<li>${x}</li>`).join('')}</ul>
+    ${it.id === 'TXN' ? '<p class="mut" style="font-size:12px;margin:6px 0 0">夜盤 K 線日期為期交所歸屬的次一交易日；換月時價格會有跳動。</p>' : ''}`;
+}
+
+// 收合狀態記住
+document.querySelectorAll('details.box').forEach(d => {
+  try { const v = localStorage.getItem('ch-' + d.id); if (v != null) d.open = v === '1'; } catch {}
+  d.addEventListener('toggle', () => { try { localStorage.setItem('ch-' + d.id, d.open ? '1' : '0'); } catch {} });
+});
+(async () => {
+  try { DATA = await (await fetch('pm/kline.json?t=' + Date.now())).json(); }
+  catch { $('#info').textContent = 'K線資料還沒準備好，請稍後再試'; return; }
+  let g0 = '';
+  $('#tabs').innerHTML = DATA.items.map(x => {
+    const g = GROUP[x.group], sep = g !== g0 ? `<span class="sep">${g}</span>` : ''; g0 = g;
+    return `${sep}<button data-id="${x.id}">${x.name}</button>`;
+  }).join('');
+  $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.id); };
+  show(new URLSearchParams(location.search).get('s') || 'TWII');
+})();
+</script>
+</body>
+</html>

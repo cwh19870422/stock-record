@@ -22,8 +22,8 @@ main{max-width:760px;margin:0 auto;padding:12px}
 .tile .s{font-size:12px}
 .sum{background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px;margin-bottom:12px;font-size:14px}
 .sum b{color:var(--acc)}
-section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;scroll-margin-top:70px}
-section h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+details.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;scroll-margin-top:70px}
+details.sec h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid}
 .tag.up{color:var(--up);border-color:var(--up)} .tag.dn{color:var(--dn);border-color:var(--dn)} .tag.mid{color:var(--mut);border-color:var(--mut)}
 .big{font-size:26px;font-weight:800;margin:4px 0 0}
@@ -50,11 +50,21 @@ th{color:var(--mut);font-weight:500}
 .stock svg{grid-column:1/3;width:100%;height:46px}
 .err{color:var(--up);padding:20px;text-align:center}
 footer{color:var(--mut);font-size:12px;text-align:center;padding:8px 16px}
+details.sec>summary{list-style:none;cursor:pointer;color:var(--tx);font-size:inherit}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+details.sec>summary .arw{color:var(--mut);font-size:13px;flex:none;transition:transform .2s}
+details.sec[open]>summary .arw{transform:rotate(90deg)}
+details.sec>summary .big{font-size:20px}
+details.sec[open]>summary .big{font-size:26px}
+.kl{font-size:12px;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:99px;padding:1px 8px;text-decoration:none}
+.tools{display:flex;gap:8px;margin-bottom:10px}
+.tools button,.tools a{flex:1;text-align:center;background:var(--card);color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:7px;font-size:13px;cursor:pointer;text-decoration:none}
 </style>
 </head>
 <body>
 <header>
-  <h1>📊 盤前看板</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h1>📊 盤前看板</h1><a href="chart.html" style="color:var(--blue);font-size:14px;text-decoration:none">📈 K線圖 →</a></div>
   <div class="sub" id="upd">載入中…</div>
 </header>
 <main id="app"></main>
@@ -149,7 +159,7 @@ async function main() {
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
 
   // 1. 指數
-  h += `<section id="idx"><h2>① 加權指數 ${tag(sig.idx[0], sig.idx[1])}</h2>
+  h += `<section id="idx"><h2>① 加權指數 ${tag(sig.idx[0], sig.idx[1])} <a class="kl" href="chart.html?s=TWII">K線</a></h2>
     <div class="big">${fmt(ix.c, 2)}<small class="${cls(ix.ch)}">${sg(ix.ch, 2)}（${sg(ix.p, 2)}%）</small></div>
     <div class="chips"><span class="chip">5均 ${fmt(ix.ma5)}（差 <span class="${cls(ix.c - ix.ma5)}">${sg(ix.c - ix.ma5)}</span>）</span>
     <span class="chip">月線 ${fmt(ix.ma20)}（差 <span class="${cls(ix.c - ix.ma20)}">${sg(ix.c - ix.ma20)}</span>）</span>
@@ -159,7 +169,7 @@ async function main() {
     <div class="how"><b>怎麼看：</b>大跌但沒破5均＝正常拉回；跌破5均＝開始等第二隻腳。月線下彎時，指數靠近月線就是壓力，不追高。</div></section>`;
 
   // 2. 夜盤
-  h += `<section id="night"><h2>② 台指期夜盤 ${tag(sig.night[0], sig.night[1])}</h2>
+  h += `<section id="night"><h2>② 台指期夜盤 ${tag(sig.night[0], sig.night[1])} <a class="kl" href="chart.html?s=TXN">K線</a></h2>
     ${nL ? `<div class="big">${fmt(nL.c)}<small class="${cls(nL.ch)}">${sg(nL.ch)}（${sg(nL.p, 2)}%）</small></div><p class="note">${md(nL.d)} 盤前參考（${nL.m} 合約）</p>` : '<p class="note">尚無資料</p>'}
     ${bars(days.map((d, i) => N[i]?.d || d), N.map(x => x?.ch ?? null), 0, '點')}
     ${table(['盤前日', '夜盤收', '漲跌', '%'], N.map((x, i) => [md(x?.d || days[i]), fmt(x?.c), `<span class="${cls(x?.ch)}">${sg(x?.ch)}</span>`, sg(x?.p, 2)]))}
@@ -167,7 +177,7 @@ async function main() {
 
   // 3. 美股
   const usL = k => lastOf(J.us[k]);
-  h += `<section id="sox"><h2>③ 費城半導體 ${tag(sig.sox[0], sig.sox[1])}</h2>
+  h += `<section id="sox"><h2>③ 費城半導體 ${tag(sig.sox[0], sig.sox[1])} <a class="kl" href="chart.html?s=SOX">K線</a></h2>
     ${sL ? `<div class="big">${fmt(sL.c, 2)}<small class="${cls(sL.p)}">${sg(sL.p, 2)}%</small></div><p class="note">美國 ${md(sL.d)} 收盤</p>` : '<p class="note">尚無資料</p>'}
     <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = usL(k); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.p, 2)}%</span></span>`; }).join('')}</div>
     ${bars(days.map((d, i) => S[i]?.d || d), S.map(x => x?.p ?? null), 2, '%')}
@@ -202,10 +212,10 @@ async function main() {
 
   // 7. 權值股
   if (J.top5?.list?.length) {
-    h += `<section id="top5"><h2>⭐ 權值股前五名</h2><p class="note">依市值排名，權重為占上市總市值比例（約略值）；線圖為近 10 天收盤</p>`;
+    h += `<section id="top5"><h2>⭐ 權值股前五名</h2><div class="big" style="font-size:15px">${J.top5.list.map(s => s.name).join('、')}</div><p class="note">依市值排名，權重為占上市總市值比例（約略值）；線圖為近 10 天收盤</p>`;
     J.top5.list.forEach((s, k) => {
       const hs = days.map(d => s.hist[d] || {}), x = hs.findLast(v => v.c != null) || {}, fi = hs.at(-1)?.fi;
-      h += `<div class="stock"><div><span class="n">${k + 1}. ${s.name}</span> <span class="w">${s.code}｜權重 ${fmt(s.w, 1)}%</span><div class="w">外資 <span class="${cls(fi)}">${sg(fi)}</span> 張</div></div>
+      h += `<div class="stock"><div><a class="n" style="color:inherit;text-decoration:none" href="chart.html?s=${s.code}">${k + 1}. ${s.name} <span class="kl">K線</span></a> <span class="w">${s.code}｜權重 ${fmt(s.w, 1)}%</span><div class="w">外資 <span class="${cls(fi)}">${sg(fi)}</span> 張</div></div>
         <div class="px">${fmt(x.c, 1)}<div class="${cls(x.ch)}" style="font-size:13px">${sg(x.ch, 1)}（${sg(x.p, 2)}%）</div></div>
         ${spark(hs.map(v => v.c ?? null))}
         </div>`;
@@ -213,8 +223,29 @@ async function main() {
     h += table(['日期', ...J.top5.list.map(s => s.name)], days.map(d => [md(d), ...J.top5.list.map(s => { const v = s.hist[d] || {}; return `${fmt(v.c, 1)}<br><span class="${cls(v.ch)}">${sg(v.p, 2)}%</span>`; })]));
     h += `<div class="how"><b>怎麼看：</b>權值股決定大盤方向，特別盯台積電有沒有撐盤或回檔。</div></section>`;
   }
-  $('#app').innerHTML = h;
+  $('#app').innerHTML = `<div class="tools"><button id="openAll">全部展開</button><button id="closeAll">全部收合</button></div>` + h;
+  // 每一區改成可收合（預設收合，只顯示標題＋最新數字）
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem('pm-open') || '{}'); } catch {}
+  const save = () => { try { localStorage.setItem('pm-open', JSON.stringify(saved)); } catch {} };
+  document.querySelectorAll('#app section').forEach(sec => {
+    const d = document.createElement('details'); d.className = 'sec'; d.id = sec.id;
+    const sum = document.createElement('summary'), row = document.createElement('div'); row.className = 'row';
+    const left = document.createElement('div'), arw = document.createElement('span'); arw.className = 'arw'; arw.textContent = '▶';
+    const h2 = sec.querySelector('h2'), big = sec.querySelector(':scope > .big');
+    left.append(h2); if (big) left.append(big);
+    row.append(left, arw); sum.append(row); d.append(sum);
+    while (sec.firstChild) d.append(sec.firstChild);
+    d.open = !!saved[d.id];
+    d.addEventListener('toggle', () => { saved[d.id] = d.open; save(); });
+    sec.replaceWith(d);
+  });
+  sumLinks();
+  $('#openAll').onclick = () => document.querySelectorAll('details.sec').forEach(d => d.open = true);
+  $('#closeAll').onclick = () => document.querySelectorAll('details.sec').forEach(d => d.open = false);
+  document.querySelectorAll('a.tile').forEach(a => a.addEventListener('click', () => { const d = document.querySelector(a.getAttribute('href')); if (d) d.open = true; }));
 }
+// 標題裡的 K線連結：點了直接開圖，不觸發收合
+function sumLinks() { document.querySelectorAll('summary a').forEach(a => a.addEventListener('click', e => e.stopPropagation())); }
 main();
 </script>
 </body>
