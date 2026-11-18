@@ -105,13 +105,15 @@ function bars(dates, vals, d = 0, unit = '') {
   return s + '</svg>';
 }
 // 迷你K線（近 30 天，含 5MA／20MA），點了到詳細K線頁
+// 均線配色：色弱友善（黃／白／天藍／粉紫虛線），顏色＋線型雙重區分
+const MAS = [{ k: 5, c: '#F0E442', w: 1.6 }, { k: 10, c: '#FFFFFF', w: 1.1 }, { k: 20, c: '#3DA5FF', w: 2 }, { k: 60, c: '#CC79A7', w: 1.6, dash: true }];
 // 迷你K線（含成交量、5／10／20／60MA），點了到詳細K線頁
-function minik(item, h = 190, n = 30) {
+function minik(item, h = 190, n = 30, opt = {}) {
   if (!item) return '<p class="note">K線資料準備中</p>';
   const all = item.bars, C = all.map(b => b[4]);
   const ma = k => C.map((_, i) => i + 1 < k ? null : C.slice(i + 1 - k, i + 1).reduce((a, b) => a + b, 0) / k).slice(-n);
-  const MA = [[5, '#f2b84b'], [10, '#ff7eb6'], [20, '#5aa9ff'], [60, '#b48cff']].map(([k, c]) => ({ k, c, v: ma(k) }));
-  const B = all.slice(-n), hasVol = B.some(b => b[5] > 0);
+  const MA = MAS.filter(m => (opt.ma || [5, 10, 20, 60]).includes(m.k)).map(m => ({ ...m, v: ma(m.k) }));
+  const B = all.slice(-n), hasVol = opt.vol !== false && B.some(b => b[5] > 0);
   const W = 340, R = 44, top = 8, bot = 16, volH = hasVol ? (h - top - bot) * 0.22 : 0, pH = h - top - bot - volH - (hasVol ? 4 : 0), cw = (W - R) / B.length;
   const vals = B.flatMap(b => [b[2], b[3]]).concat(...MA.map(m => m.v)).filter(v => v != null);
   const mx = Math.max(...vals), mn = Math.min(...vals), y = v => top + (mx - v) / (mx - mn || 1) * pH;
@@ -128,9 +130,9 @@ function minik(item, h = 190, n = 30) {
   });
   if (hasVol) s += `<text x="${W - R + 3}" y="${vBase - volH + 8}" font-size="9" fill="#93a3bf">量</text>`;
   const path = arr => arr.map((v, i) => v == null ? '' : `${i * cw + cw / 2},${y(v)}`).filter(Boolean).join(' ');
-  MA.forEach(m => s += `<polyline points="${path(m.v)}" fill="none" stroke="${m.c}" stroke-width="1.2"/>`);
+  MA.forEach(m => s += `<polyline points="${path(m.v)}" fill="none" stroke="${m.c}" stroke-width="${m.w}"${m.dash ? ' stroke-dasharray="4 3"' : ''}/>`);
   [[0, 'start'], [Math.floor(B.length / 2), 'middle'], [B.length - 1, 'end']].forEach(([i, a]) => s += `<text x="${a === 'start' ? 0 : a === 'end' ? W - R : i * cw + cw / 2}" y="${h - 3}" font-size="9" text-anchor="${a}" fill="#93a3bf">${md(B[i][0])}</text>`);
-  return s + `</svg><div class="note" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>${MA.map(m => `<span style="color:${m.c}">━${m.k}MA</span>`).join(' ')}　近 ${n} 天</span><span style="color:var(--blue)">點圖看 KD、MACD →</span></div></a>`;
+  return s + `</svg><div class="note" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>${MA.map(m => `<span style="color:${m.c}">${m.dash ? '┅' : '━'}${m.k}MA</span>`).join(' ')}　近 ${n} 天</span><span style="color:var(--blue)">點圖看 KD、MACD →</span></div></a>`;
 }
 function spark(vals) {
   const ok = vals.filter(v => v != null); if (ok.length < 2) return '';
@@ -208,7 +210,7 @@ async function main() {
   // 2. 夜盤
   h += `<section id="night"><h2>② 台指期夜盤 ${tag(sig.night[0], sig.night[1])} <a class="kl" href="chart.html?s=TXN">K線</a></h2>
     ${nL ? `<div class="big">${fmt(nL.c)}<small class="${cls(nL.ch)}">${sg(nL.ch)}（${sg(nL.p, 2)}%）</small></div><p class="note">${md(nL.d)} 盤前參考（${nL.m} 合約）</p>` : '<p class="note">尚無資料</p>'}
-    ${minik(kItem('TXN'))}
+    ${minik(kItem('TXN'), 170, 30, { vol: false, ma: [5, 20] })}
     ${table(['盤前日', '夜盤收', '漲跌', '%'], N.map((x, i) => [md(x?.d || days[i]), fmt(x?.c), `<span class="${cls(x?.ch)}">${sg(x?.ch)}</span>`, sg(x?.p, 2)]))}
     <div class="how"><b>怎麼看：</b>最直接預告今天開高或開低。夜盤大漲要防開高走低；遇到突發利空，看夜盤最後收在哪裡，急殺後拉回＝利空可能已提前反應。</div></section>`;
 
@@ -217,7 +219,7 @@ async function main() {
   h += `<section id="sox"><h2>③ 費城半導體 ${tag(sig.sox[0], sig.sox[1])} <a class="kl" href="chart.html?s=SOX">K線</a></h2>
     ${sL ? `<div class="big">${fmt(sL.c, 2)}<small class="${cls(sL.p)}">${sg(sL.p, 2)}%</small></div><p class="note">美國 ${md(sL.d)} 收盤</p>` : '<p class="note">尚無資料</p>'}
     <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = usL(k); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.p, 2)}%</span></span>`; }).join('')}</div>
-    ${minik(kItem('SOX'))}
+    ${minik(kItem('SOX'), 170, 30, { ma: [5, 20] })}
     ${table(['美股日', '費半', '漲跌%'], S.map((x, i) => [md(x?.d || days[i]), fmt(x?.c, 2), `<span class="${cls(x?.p)}">${sg(x?.p, 2)}</span>`]))}
     <div class="how"><b>怎麼看：</b>費半和台積電、台股連動最強。注意是「反彈後又跌」（趨勢偏弱）還是「止穩」；長下影線代表低檔有買盤。</div></section>`;
 
