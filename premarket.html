@@ -140,6 +140,30 @@ function minik(item, h = 190, n = 30, opt = {}) {
   [[0, 'start'], [Math.floor(B.length / 2), 'middle'], [B.length - 1, 'end']].forEach(([i, a]) => s += `<text x="${a === 'start' ? 0 : a === 'end' ? W - R : i * cw + cw / 2}" y="${h - 3}" font-size="9" text-anchor="${a}" fill="#93a3bf">${md(B[i][0])}</text>`);
   return s + `</svg><div class="note" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>${MA.map(m => `<span style="color:${m.c}">${m.dash ? '┅' : '━'}${m.k}MA</span>`).join(' ')}　近 ${n} 天</span><span style="color:var(--blue)">點圖看 KD、MACD →</span></div></a>`;
 }
+// 總量折線：每天標出總量，下方一排是當天增減
+function level(dates, vals, chg, fv, fc, o = {}) {
+  const W = 340, L = 8, R = 8, n = dates.length, cw = (W - L - R) / n, top = 30, ph = 70;
+  const ok = vals.filter(v => v != null);
+  if (!ok.length) return '<p class="note">尚無資料</p>';
+  const all = o.ref != null ? ok.concat(o.ref) : ok, mx = Math.max(...all), mn = Math.min(...all), pad = (mx - mn) * .12 || 1;
+  const y = v => top + (mx + pad - v) / (mx - mn + pad * 2) * ph, x = i => L + i * cw + cw / 2;
+  let s = `<p class="note" style="margin:10px 0 0">${o.title}</p><svg class="bars" style="margin-top:2px" viewBox="0 0 ${W} ${top + ph + 40}">`;
+  if (o.ref != null) s += `<line x1="0" x2="${W}" y1="${y(o.ref)}" y2="${y(o.ref)}" stroke="#F0E442" stroke-dasharray="4 3" stroke-opacity=".7"/><text x="2" y="${y(o.ref) + 11}" font-size="9" fill="#F0E442">${o.refLabel}</text>`;
+  const pts = vals.map((v, i) => v == null ? null : [x(i), y(v)]).filter(Boolean);
+  s += `<polygon points="${pts[0][0]},${top + ph} ${pts.map(p => p.join(',')).join(' ')} ${pts.at(-1)[0]},${top + ph}" fill="#3DA5FF" fill-opacity=".12"/>`;
+  s += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#3DA5FF" stroke-width="2" stroke-linejoin="round"/>`;
+  vals.forEach((v, i) => {
+    if (v == null) return;
+    const last = i === n - 1;
+    s += `<circle cx="${x(i)}" cy="${y(v)}" r="${last ? 4 : 2.6}" fill="#3DA5FF" stroke="#17243d" stroke-width="1.5"/>`;
+    s += `<text x="${x(i)}" y="${y(v) - 8}" font-size="${last ? 9.5 : 8.5}" font-weight="${last ? 700 : 400}" text-anchor="middle" fill="${last ? '#e8eef8' : '#c9d5ea'}">${fv(v)}</text>`;
+    const c = chg[i];
+    if (c != null) s += `<text x="${x(i)}" y="${top + ph + 16}" font-size="8.5" text-anchor="middle" fill="${c > 0 ? '#ff5a5a' : c < 0 ? '#2ecc71' : '#93a3bf'}">${fc(c)}</text>`;
+    s += `<text x="${x(i)}" y="${top + ph + 32}" font-size="9" text-anchor="middle" fill="#93a3bf">${md(dates[i])}</text>`;
+  });
+  s += `<text x="0" y="${top + ph + 16}" font-size="8" fill="#93a3bf" opacity="0">${o.chgTitle}</text>`;
+  return s + `</svg>`;
+}
 // 分開小圖：每個項目一排、各自比例尺；實心＝買超、淡色＝賣超
 function multi(dates, rows, unit = '') {
   const W = 340, L = 46, n = dates.length, cw = (W - L) / n, rh = 78;
@@ -259,7 +283,7 @@ async function main() {
   h += `<section id="fut"><h2>⑤ 外資台指期淨未平倉 ${tag(sig.fut[0], sig.fut[1])}</h2>
     <div class="big ${cls(tL.net)}">${fmt(tL.net)} 口<small class="${cls(tL.chg)}">${sg(tL.chg)}</small></div>
     <p class="note">負數＝淨空單；「增減」為正代表空單減少</p>
-    ${bars(days, T.map(x => x.chg ?? null), 0, '口')}
+    ${level(days, T.map(x => x.net ?? null), T.map(x => x.chg ?? null), v => (v / 1e4).toFixed(2) + '萬', v => sg(v / 1e3, 1) + 'k', { ref: -100000, refLabel: '-10萬口', title: '淨未平倉（口）', chgTitle: '增減' })}
     ${table(['日期', '淨未平倉', '增減'], days.map((d, i) => [md(d), fmt(T[i].net), `<span class="${cls(T[i].chg)}">${sg(T[i].chg)}</span>`]))}
     <div class="how"><b>怎麼看：</b>空單大減、跌破 10 萬口＝壓力退潮；10 萬口以上＝高檔仍有壓盤工具。現貨買、期貨空單卻增加＝訊號矛盾。結算日前後數字容易失真。</div></section>`;
 
@@ -268,8 +292,8 @@ async function main() {
     <div class="big">融資 <span class="${cls(mL.finChg)}">${sg(mL.finChg, 1)} 億</span></div>
     <div class="chips"><span class="chip">融資餘額 ${fmt(mL.fin, 0)} 億</span><span class="chip">融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}</span> 張</span><span class="chip">融券餘額 ${fmt(mL.sht)} 張</span></div>
     <p class="note">${mLd ? md(mLd) + ' 資料（融資券約晚上 9 點後公布）' : ''}</p>
-    <p class="note" style="margin-top:8px">融資增減（億）</p>${bars(days, M.map(x => x.finChg ?? null), 1, '億')}
-    <p class="note">融券增減（張）</p>${bars(days, M.map(x => x.shtChg ?? null), 0, '張')}
+    ${level(days, M.map(x => x.fin ?? null), M.map(x => x.finChg ?? null), v => fmt(v, 0), v => sg(v, 0), { title: '融資餘額（億）', chgTitle: '增減' })}
+    ${level(days, M.map(x => x.sht ?? null), M.map(x => x.shtChg ?? null), v => (v / 1e4).toFixed(1) + '萬', v => sg(v / 1e3, 1) + 'k', { title: '融券餘額（張）', chgTitle: '增減' })}
     ${table(['日期', '融資增減', '融資餘額', '融券增減', '融券餘額'], days.map((d, i) => [md(d), `<span class="${cls(M[i].finChg)}">${sg(M[i].finChg, 1)}</span>`, fmt(M[i].fin), `<span class="${cls(M[i].shtChg)}">${sg(M[i].shtChg)}</span>`, fmt(M[i].sht)]))}
     <div class="how"><b>怎麼看：</b>融資減＝散戶被洗出場、籌碼變乾淨；融資大增＝散戶追價。融券增加＝未來的軋空燃料；融券大減（回補）＝反彈有軋空推力。</div></section>`;
 
