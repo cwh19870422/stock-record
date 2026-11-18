@@ -226,7 +226,9 @@ async function main() {
   const M = days.map(d => J.margin[d] || {});
   // 最新夜盤、費半：取最新一筆
   const lastOf = o => { const k = Object.keys(o || {}).sort().at(-1); return k ? { d: k, ...o[k] } : null; };
-  const nL = lastOf(J.night), sL = lastOf(J.us.SOX);
+  // 美股漲跌點數＝今天收盤－前一天收盤
+  const withCh = (o, x) => { if (!x) return x; const ks = Object.keys(o || {}).sort(), i = ks.indexOf(x.d), pv = i > 0 ? o[ks[i - 1]]?.c : null; return { ...x, ch: pv != null ? Math.round((x.c - pv) * 100) / 100 : (x.p != null ? Math.round((x.c - x.c / (1 + x.p / 100)) * 100) / 100 : null) }; };
+  const nL = lastOf(J.night), sL = withCh(J.us.SOX, lastOf(J.us.SOX));
   const fL = F.findLast(x => x.tot != null) || {}, tL = T.findLast(x => x.net != null) || {}, mL = M.findLast(x => x.finChg != null) || {};
   const mLd = days[M.findLastIndex(x => x.finChg != null)];
 
@@ -247,7 +249,7 @@ async function main() {
   const tiles = [
     ['idx', '加權指數', fmt(ix.c), `<span class="${cls(ix.ch)}">${sg(ix.ch)}</span>`, sig.idx],
     ['night', `台指期夜盤 <small>${nL ? md(nL.d) + '盤前' : ''}</small>`, nL ? fmt(nL.c) : '—', nL ? `<span class="${cls(nL.ch)}">${sg(nL.ch)}</span>` : '', sig.night],
-    ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.p, 2)}%</span>` : '', sig.sox],
+    ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
     ['fut', '外資期貨淨未平倉', fmt(tL.net), `<span class="${cls(tL.chg)}">${sg(tL.chg)}口</span>`, sig.fut],
     ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
@@ -275,8 +277,8 @@ async function main() {
   // 3. 美股
   const usL = k => lastOf(J.us[k]);
   h += `<section id="sox"><h2>③ 費城半導體 ${tag(sig.sox[0], sig.sox[1])} <a class="kl" href="chart.html?s=SOX">K線</a></h2>
-    ${sL ? `<div class="big">${fmt(sL.c, 2)}<small class="${cls(sL.p)}">${sg(sL.p, 2)}%</small></div><p class="note">美國 ${md(sL.d)} 收盤</p>` : '<p class="note">尚無資料</p>'}
-    <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = usL(k); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.p, 2)}%</span></span>`; }).join('')}</div>
+    ${sL ? `<div class="big">${fmt(sL.c, 2)}<small class="${cls(sL.p)}">${sg(sL.ch, 2)}（${fmt(Math.abs(sL.p), 2)}%）</small></div><p class="note">美國 ${md(sL.d)} 收盤</p>` : '<p class="note">尚無資料</p>'}
+    <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = withCh(J.us[k], usL(k)); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.ch, 0)}（${fmt(Math.abs(x?.p), 2)}%）</span></span>`; }).join('')}</div>
     ${minik(kItem('SOX'), 170, 30, { ma: [5, 20] })}
     ${table(['美股日', '費半', '漲跌%'], S.map((x, i) => [md(x?.d || days[i]), fmt(x?.c, 2), `<span class="${cls(x?.p)}">${sg(x?.p, 2)}</span>`]))}
     <div class="how"><b>美股交易時間（台灣時間）：</b>${usHours()}</div></section>`;
