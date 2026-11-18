@@ -24,6 +24,7 @@ async function twseDay() { // 往回找最近一個有資料的交易日
     const j = await r.json().catch(() => ({}));
     const t = (j.tables || []).find(t => t.fields?.includes('證券代號') && t.fields?.includes('收盤價'));
     if (j.stat === 'OK' && t?.data?.length) {
+      globalThis.IDX_TABLES = j.tables;
       const f = n => t.fields.indexOf(n);
       const [iC, iN, iV, iO, iH, iL, iX] = ['證券代號', '證券名稱', '成交股數', '開盤價', '最高價', '最低價', '收盤價'].map(f);
       const rows = t.data.map(r => ({ c: String(r[iC]).trim(), n: String(r[iN]).trim(), m: '上市', bar: [d, num(r[iO]), num(r[iH]), num(r[iL]), num(r[iX]), Math.round((num(r[iV]) || 0) / 1000)] }))
@@ -147,6 +148,19 @@ for (const [mk, A] of Object.entries(agg)) {
     })).filter(g => g.val > 0).sort((a, b) => b.val - a.val);
   }
 }
+// 上市「日」漲跌幅改用證交所官方類股指數
+const norm = n => String(n).replace(/類指數|指數|工業|業|設備|及|\s/g, '');
+const off = new Map();
+(globalThis.IDX_TABLES || []).forEach(t => {
+  const iN = t.fields?.findIndex(f => f.includes('指數')), iP = t.fields?.findIndex(f => f.includes('百分比'));
+  if (iN < 0 || iP < 0) return;
+  t.data.forEach(r => { const nm = String(r[iN]); if (nm.includes('類指數')) off.set(norm(nm), num(String(r[iP]).replace(/<[^>]+>/g, ''))); });
+});
+(sector.markets['上市']?.d || []).forEach(g => {
+  const v = off.get(norm(g.name));
+  if (v != null) { log.push(`  ${g.name}：自算 ${g.pct}% → 官方 ${v}%`); g.pct = v; g.official = true; }
+});
+say(`官方類股指數對到 ${(sector.markets['上市']?.d || []).filter(g => g.official).length} 類`);
 fs.writeFileSync('pm/sector.json', JSON.stringify(sector));
 say(`產業熱力圖：${Object.entries(sector.markets).map(([m, x]) => `${m} ${x.d?.length || 0} 類`).join('、')}`);
 fs.writeFileSync('k/log.txt', log.join('\n') + '\n');
