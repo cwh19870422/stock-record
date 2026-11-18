@@ -149,10 +149,12 @@ for (const [mk, A] of Object.entries(agg)) {
   }
 }
 // 上市「日」漲跌幅改用證交所官方類股指數
+try {
 const norm = n => String(n).replace(/類指數|指數|工業|業|設備|及|\s/g, '');
 const off = new Map();
 (globalThis.IDX_TABLES || []).forEach(t => {
-  const iN = t.fields?.findIndex(f => f.includes('指數')), iP = t.fields?.findIndex(f => f.includes('百分比'));
+  if (!Array.isArray(t?.fields) || !Array.isArray(t?.data)) return;
+  const iN = t.fields.findIndex(f => String(f).includes('指數')), iP = t.fields.findIndex(f => String(f).includes('百分比'));
   if (iN < 0 || iP < 0) return;
   t.data.forEach(r => { const nm = String(r[iN]); if (nm.includes('類指數')) off.set(norm(nm), num(String(r[iP]).replace(/<[^>]+>/g, ''))); });
 });
@@ -161,6 +163,7 @@ const off = new Map();
   if (v != null) { log.push(`  ${g.name}：自算 ${g.pct}% → 官方 ${v}%`); g.pct = v; g.official = true; }
 });
 say(`官方類股指數對到 ${(sector.markets['上市']?.d || []).filter(g => g.official).length} 類`);
+} catch (e) { say('⚠️ 官方類股指數：' + e.message); }
 fs.writeFileSync('pm/sector.json', JSON.stringify(sector));
 say(`產業熱力圖：${Object.entries(sector.markets).map(([m, x]) => `${m} ${x.d?.length || 0} 類`).join('、')}`);
 fs.writeFileSync('k/log.txt', log.join('\n') + '\n');
