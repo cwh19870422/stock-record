@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (stock-record stocks)' };
-const MAX_BACKFILL = +(process.env.MAX_BACKFILL || 1300);
+const MAX_BACKFILL = +(process.env.MAX_BACKFILL || 3000);
 const KEEP = 300;
 const num = x => { const v = parseFloat(String(x ?? '').replace(/[,\s]/g, '')); return Number.isFinite(v) ? v : null; };
 const r2 = x => Math.round(x * 100) / 100;
