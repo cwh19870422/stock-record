@@ -441,7 +441,7 @@ function liveInit(J) {
         const f = await RT.fut(fs);
         if (f?.z) { setTile('night', f.z, f.ch, false, `${fs ? '台指期夜盤' : '台指期日盤'} <small>即時</small>`); t = t || RT.hhmmss(f.t); }
       }
-      $('#live').innerHTML = `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}`;
+      $('#live').innerHTML = t ? `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}` : '';
     } catch (e) { $('#live').innerHTML = '<span class="mut">即時連線失敗，稍後重試</span>'; }
   };
   tick(); setInterval(tick, RT.every);
