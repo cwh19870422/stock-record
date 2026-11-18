@@ -445,6 +445,7 @@ function liveInit(J) {
     } catch (e) { $('#live').innerHTML = '<span class="mut">即時連線失敗，稍後重試</span>'; }
   };
   tick(); setInterval(tick, RT.every);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 }
 main();
 </script>

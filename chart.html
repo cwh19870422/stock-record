@@ -237,7 +237,7 @@ document.querySelectorAll('details.box').forEach(d => {
   q.placeholder = `查詢個股（共 ${LIST.length} 檔）：輸入代號或名稱`;
 })();
 // ---- 盤中即時：更新目前這檔的最後一根 K 棒 ----
-if (RT.on) setInterval(async () => {
+const liveTick = async () => {
   if (!cur || !RT.stockLive()) { $('#live').textContent = ''; return; }
   const top = (DATA?.items || []).filter(x => x.group === 'top5' || x.group === 'watch').map(x => x.id);
   let code = null;
@@ -253,7 +253,8 @@ if (RT.on) setInterval(async () => {
     await show(cur.id, true);
     $('#live').innerHTML = ` <span style="color:#ff5a5a">●</span> 即時 ${RT.hhmmss(x.t)}`;
   } catch {}
-}, RT.every);
+};
+if (RT.on) { setInterval(liveTick, RT.every); document.addEventListener('visibilitychange', () => { if (!document.hidden) liveTick(); }); setTimeout(liveTick, 3000); }
 </script>
 </body>
 </html>
