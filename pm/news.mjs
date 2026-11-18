@@ -8,7 +8,7 @@ const TOPICS = [
   ['🇺🇸 美股動態', '美股 收盤 道瓊 那斯達克 費半'],
   ['💻 科技與半導體', '輝達 OR 半導體 OR AI晶片 OR 台積電 國際'],
   ['🌐 貿易與地緣政治', '關稅 OR 貿易戰 OR 出口管制 OR 制裁 OR 地緣政治'],
-  ['🛢️ 原物料與匯率', '油價 OR 美元指數 OR 美債殖利率 OR 黃金 OR 日圓'],
+  ['🛢️ 原物料與匯率', '油價 OR 美元指數 OR 美債殖利率 OR 國際金價 OR 日圓匯率'],
 ];
 const dec = s => s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, '').trim();
