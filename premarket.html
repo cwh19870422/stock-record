@@ -60,6 +60,13 @@ details.sec[open]>summary .big{font-size:26px}
 .kl{font-size:12px;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:99px;padding:1px 8px;text-decoration:none}
 .tools{display:flex;gap:8px;margin-bottom:10px}
 .tools button,.tools a{flex:1;text-align:center;background:var(--card);color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:7px;font-size:13px;cursor:pointer;text-decoration:none}
+details.nw{border-top:1px solid var(--line);padding:6px 0}
+details.nw>summary{color:var(--tx);font-weight:600;font-size:14px}
+details.nw ul{list-style:none;margin:6px 0 0;padding:0}
+details.nw li{padding:6px 0;border-bottom:1px dashed #22314f;font-size:14px;line-height:1.45}
+details.nw li:last-child{border-bottom:0}
+details.nw li a{color:var(--tx);text-decoration:none}
+details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 </style>
 </head>
 <body>
@@ -140,6 +147,7 @@ async function main() {
   try { J = await (await fetch('pm/data.json?t=' + Date.now())).json(); }
   catch { $('#app').innerHTML = '<div class="err">資料還沒準備好，請稍後再試</div>'; return; }
   try { KL = await (await fetch('pm/kline.json?t=' + Date.now())).json(); } catch {}
+  let NW = null; try { NW = await (await fetch('pm/news.json?t=' + Date.now())).json(); } catch {}
   const kItem = id => KL.items.find(x => x.id === id);
   const days = J.days, last = days.at(-1);
   $('#upd').textContent = `更新時間 ${J.updated}｜最近交易日 ${md(last)}`;
@@ -247,6 +255,16 @@ async function main() {
     });
     h += table(['日期', ...J.top5.list.map(s => s.name)], days.map(d => [md(d), ...J.top5.list.map(s => { const v = s.hist[d] || {}; return `${fmt(v.c, 1)}<br><span class="${cls(v.ch)}">${sg(v.p, 2)}%</span>`; })]));
     h += `<div class="how"><b>怎麼看：</b>權值股決定大盤方向，特別盯台積電有沒有撐盤或回檔。</div></section>`;
+  }
+  // 8. 國際重大經濟新聞
+  if (NW?.topics?.length) {
+    const ago = t => { const m = (Date.now() - t) / 6e4; return !t ? '' : m < 60 ? Math.round(m) + ' 分鐘前' : m < 1440 ? Math.round(m / 60) + ' 小時前' : Math.round(m / 1440) + ' 天前'; };
+    const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const total = NW.topics.reduce((n, t) => n + t.items.length, 0);
+    h += `<section id="news"><h2>🌍 國際重大經濟新聞</h2><div class="big" style="font-size:15px">${NW.topics.map(t => t.name.split(' ')[1]).join('・')}</div>
+      <p class="note">近 2 天｜共 ${total} 則｜更新 ${NW.updated}</p>
+      ${NW.topics.map(t => `<details class="nw"><summary>${t.name}（${t.items.length}）</summary><ul>${t.items.map(x => `<li><a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.t)}</a><span>${esc(x.s)}　${ago(x.time)}</span></li>`).join('') || '<li class="mut">目前沒有新聞</li>'}</ul></details>`).join('')}
+      <div class="how"><b>怎麼看：</b>新聞當背景參考，不當進出主因；看完新聞，再回頭確認夜盤、費半有沒有反應。利空出現但夜盤急殺後拉回＝可能已提前反應。</div></section>`;
   }
   $('#app').innerHTML = `<div class="tools"><button id="openAll">全部展開</button><button id="closeAll">全部收合</button></div>` + h;
   // 每一區改成可收合（預設收合，只顯示標題＋最新數字）
