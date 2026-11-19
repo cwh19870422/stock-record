@@ -141,7 +141,7 @@ function drawTabs() {
 async function drawList() {
   const P = isSys() ? simPat() : null, g = P ? { codes: P.items.map(x => x.code) } : WL.findG(grp);
   const why = P ? new Map(P.items.map(x => [x.code, x])) : null;
-  const head = P ? `<div class="sysnote"><b>${esc(P.name)}</b>：${esc(P.desc)}<br><span class="mut">樣板：${esc(P.from)}｜${md(SIM.asOf)} 收盤後掃描全部台股｜依相似度排序</span></div>` : '';
+  const head = P ? `<div class="sysnote"><b>${esc(P.name)}</b>：${esc(P.desc)}<br><span class="mut">樣板：${esc(P.from)}｜${md(SIM.asOf)} 收盤後掃描全部台股｜依相似度、漲幅、回檔量縮綜合排序</span></div>` : '';
   if (!g) { $('#list').innerHTML = ''; return; }
   if (!g.codes.length) { $('#list').innerHTML = head + (P ? `<div class="empty">今天沒有符合這個走勢的股票</div>` : `<div class="empty">這個分類還沒有股票<br>在上面的搜尋框輸入代號或名稱加入<br>或在 K線圖頁按「☆ 加入自選」</div>`); return; }
   await Promise.all(g.codes.map(getK));
