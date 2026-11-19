@@ -34,8 +34,16 @@ async function udn(cate) {
     return a ? { t: dec(a[2]), u: a[1], s: '經濟日報', at: tp(tm), st: [] } : null;
   }).filter(Boolean);
 }
-// 時報新聞（工商時報）
+// 時報新聞（工商時報）：先抓 RSS，不行再抓列表頁
 async function ctee(path) {
+  try {
+    const x = await (await get(`https://www.ctee.com.tw/rss_web/livenews/${path}`, { headers: { Accept: 'application/rss+xml,text/xml,*/*' } })).text();
+    const r = x.split('<item>').slice(1).map(b => {
+      const g = k => dec(((b.match(new RegExp(`<${k}>([\\s\\S]*?)</${k}>`)) || [])[1] || '').replace(/<!\[CDATA\[|\]\]>/g, ''));
+      return { t: g('title'), u: g('link').replace(/\?.*/, ''), s: '時報新聞', at: tp(g('pubDate').slice(0, 16)), st: [] };
+    }).filter(x => x.t && x.u);
+    if (r.length) return r;
+  } catch {}
   const html = await (await get(`https://www.ctee.com.tw/livenews/${path}`)).text();
   return html.split('<div class="newslist__card">').slice(1).map(b => {
     const a = b.match(/<h3 class="news-title"><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
