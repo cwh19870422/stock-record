@@ -70,8 +70,10 @@ details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 #sector .seg button{flex:1;background:#0f1a2e;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:6px 0;font-size:14px;cursor:pointer}
 #sector .seg button.on{background:#26375a;color:var(--tx);font-weight:700;border-color:#3DA5FF}
 .tm{position:relative;width:100%;aspect-ratio:10/11;container-type:inline-size;border-radius:10px;overflow:hidden;background:#0f1a2e}
-.tm div{position:absolute;box-sizing:border-box;border:1.5px solid #0f1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;overflow:hidden;cursor:pointer;line-height:1.25;padding:2px}
-.tm div b{font-weight:800} .tm div.sel{outline:2px solid #F0E442;outline-offset:-3px;z-index:2}
+.tmhead{display:flex;align-items:center;gap:8px;margin:4px 0 8px;font-size:14px;color:var(--mut);min-height:30px}
+.tmhead button{background:#26375a;color:var(--tx);border:1px solid #3DA5FF;border-radius:8px;padding:4px 10px;font-size:15px;font-weight:700;cursor:pointer}
+.tm>*{position:absolute;text-decoration:none;box-sizing:border-box;border:1.5px solid #0f1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;overflow:hidden;cursor:pointer;line-height:1.25;padding:2px}
+.tm>* b{font-weight:800} .tm>.sel{outline:2px solid #F0E442;outline-offset:-3px;z-index:2}
 .tmlist{margin-top:10px} .tmlist a{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line);color:var(--tx);text-decoration:none;font-size:14px}
 .tmlist a span:last-child{font-variant-numeric:tabular-nums}
 .share header a,.share .kl,.share #sector .tmlist a span.mut{display:none!important}
@@ -346,10 +348,10 @@ async function main() {
   if (SC?.markets?.['上市']) {
     const d = SC.markets['上市'].d || [], up = d.filter(x => x.pct > 0).length;
     h += `<section id="sector"><h2>🔥 產業類別熱力圖</h2><div class="big" style="font-size:15px">上市 ${d.length} 類：<span class="up">▲${up}</span>　<span class="dn">▼${d.length - up}</span></div>
-      <p class="note">方塊大小＝成交值、顏色＝漲跌幅（紅漲綠跌，越深越大）｜${md(SC.asOf)} 收盤｜點方塊看該產業個股</p>
+      <p class="note">方塊大小＝成交值、顏色＝漲跌幅（紅漲綠跌，越深越大）｜${md(SC.asOf)} 收盤｜點產業看個股方塊，再點個股看 K 線</p>
       <div class="seg" id="scM"><button data-v="上市" class="on">上市</button><button data-v="上櫃">上櫃</button></div>
       <div class="seg" id="scP">${[['d', '日'], ['w', '週'], ['m', '月'], ['q', '季'], ['y', '年']].map(([v, t], i) => `<button data-v="${v}"${i ? '' : ' class="on"'}>${t}</button>`).join('')}</div>
-      <div class="tm" id="tm"></div><div class="tmlist" id="tmlist"></div></section>`;
+      <div class="tmhead" id="tmhead"></div><div class="tm" id="tm"></div><div class="tmlist" id="tmlist"></div></section>`;
   }
   // 8. 盤前精選新聞
   h += `<section id="news"><h2>📰 盤前精選新聞</h2><div class="big" style="font-size:14px;font-weight:600;line-height:1.4" id="newsTop">載入中…</div>
@@ -400,28 +402,45 @@ function heatColor(p, mx) {
 }
 let sectorRedraw = () => {};
 function sectorInit(SC) {
-  let mk = '上市', per = 'd', sel = null;
-  const draw = () => {
-    const arr = (SC.markets[mk]?.[per] || []).filter(x => x.val > 0);
-    const W = 100, H = 110, tot = arr.reduce((s, x) => s + x.val, 0) || 1;
-    const items = arr.map(x => ({ ...x, a: x.val / tot * W * H }));
-    const mx = { d: 3, w: 6, m: 10, q: 15, y: 30 }[per];
-    const rects = squarify(items, 0, 0, W, H);
-    $('#tm').innerHTML = rects.map((r, i) => {
-      const name = r.name, fN = Math.min(5.6, r.w / (name.length * 1.12), r.h / 3.3), showN = fN >= 2.4;
-      const line2 = `${r.pct > 0 ? '▲' : r.pct < 0 ? '▼' : ''}${Math.abs(r.pct).toFixed(2)}%`, line3 = `${fmt(r.val)}億`;
-      const f2 = Math.min(fN * .75, r.w / (Math.max(line2.length, line3.length) * .62)), show2 = showN && r.h > fN * 2.4 && f2 >= 2.2, show3 = show2 && r.h > fN * 3.6;
-      return `<div data-i="${i}" class="${sel === r.name ? 'sel' : ''}" style="left:${r.x}%;top:${r.y / H * 100}%;width:${r.w}%;height:${r.h / H * 100}%;background:${heatColor(r.pct, mx)}" title="${r.name} ${fmt(r.val)}億 ${sg(r.pct, 2)}%">
-        ${showN ? `<b style="font-size:${fN}cqw">${name}</b>` : ''}${show3 ? `<span style="font-size:${f2}cqw">${line3}</span>` : ''}${show2 ? `<span style="font-size:${f2}cqw">${line2}</span>` : ''}</div>`;
-    }).join('');
-    $('#tm').onclick = e => { const d = e.target.closest('[data-i]'); if (!d) return; const r = rects[+d.dataset.i]; sel = sel === r.name ? null : r.name; draw(); };
-    const g = arr.find(x => x.name === sel);
-    $('#tmlist').innerHTML = g ? `<p class="note"><b style="color:var(--tx)">${g.name}</b>　${g.n} 檔｜成交值 ${fmt(g.val)} 億｜<span class="${cls(g.pct)}">${sg(g.pct, 2)}%</span>（市值加權）</p>` +
-      g.top.map(t => `<a href="chart.html?s=${t[0]}"><span>${t[1]} <span class="mut" style="font-size:12px">${t[0]}</span></span><span>${fmt(t[2], 1)}億　<span class="${cls(t[3])}">${sg(t[3], 2)}%</span></span></a>`).join('') : '';
+  let mk = '上市', per = 'd', sel = null, LQ = {}, lqAt = 0;
+  const box = (r, name, l2, l3, mx, tag, attr) => {
+    const fN = Math.min(5.6, r.w / (name.length * 1.12), r.h / 3.3), showN = fN >= 2.4;
+    const f2 = Math.min(fN * .75, r.w / (Math.max(l2.length, l3.length) * .62)), show2 = showN && r.h > fN * 2.4 && f2 >= 2.2, show3 = show2 && r.h > fN * 3.6;
+    return `<${tag} ${attr} style="left:${r.x}%;top:${r.y / 110 * 100}%;width:${r.w}%;height:${r.h / 110 * 100}%;background:${heatColor(r.pct, mx)}" title="${name} ${l3} ${l2}">
+      ${showN ? `<b style="font-size:${fN}cqw">${name}</b>` : ''}${show3 ? `<span style="font-size:${f2}cqw">${l3}</span>` : ''}${show2 ? `<span style="font-size:${f2}cqw">${l2}</span>` : ''}</${tag}>`;
   };
-  const seg = (id, f) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); f(b.dataset.v); sel = null; draw(); };
+  const pc = p => `${p > 0 ? '▲' : p < 0 ? '▼' : ''}${Math.abs(p).toFixed(2)}%`;
+  const draw = () => {
+    const arr = (SC.markets[mk]?.[per] || []).filter(x => x.val > 0), W = 100, H = 110;
+    const g = sel && arr.find(x => x.name === sel);
+    if (!g) sel = null;
+    if (g) { // 第二層：該產業個股
+      const st = g.top.filter(t => t[2] > 0).map(t => ({ c: t[0], name: t[1], val: t[2], pct: per === 'd' && LQ[t[0]]?.p != null ? Math.round(LQ[t[0]].p * 100) / 100 : t[3] }));
+      const tot = st.reduce((s, x) => s + x.val, 0) || 1;
+      const rects = squarify(st.map(x => ({ ...x, a: x.val / tot * W * H })), 0, 0, W, H), mx = { d: 6, w: 12, m: 20, q: 30, y: 60 }[per];
+      $('#tmhead').innerHTML = `<button id="tmBack">‹ ${g.name}</button><span>${g.n} 檔｜${fmt(g.val)} 億｜<span class="${cls(g.pct)}">${sg(g.pct, 2)}%</span>${per === 'd' && Object.keys(LQ).length ? '｜<span style="color:#ff5a5a">●</span>即時' : ''}</span>`;
+      $('#tmBack').onclick = () => { sel = null; draw(); };
+      $('#tm').innerHTML = rects.map(r => box(r, r.name, pc(r.pct), `${fmt(r.val, 1)}億`, mx, 'a', `href="chart.html?s=${r.c}"`)).join('');
+      $('#tm').onclick = null;
+      $('#tmlist').innerHTML = `<p class="note">成交值前 ${st.length} 檔｜點方塊或名稱看 K 線</p>` + st.map(t => `<a href="chart.html?s=${t.c}"><span>${t.name} <span class="mut" style="font-size:12px">${t.c}</span></span><span>${fmt(t.val, 1)}億　<span class="${cls(t.pct)}">${sg(t.pct, 2)}%</span></span></a>`).join('');
+      return;
+    }
+    const tot = arr.reduce((s, x) => s + x.val, 0) || 1, mx = { d: 3, w: 6, m: 10, q: 15, y: 30 }[per];
+    const rects = squarify(arr.map(x => ({ ...x, a: x.val / tot * W * H })), 0, 0, W, H);
+    $('#tmhead').innerHTML = '・點方塊看該產業個股';
+    $('#tm').innerHTML = rects.map((r, i) => box(r, r.name, pc(r.pct), `${fmt(r.val)}億`, mx, 'div', `data-i="${i}"`)).join('');
+    $('#tm').onclick = e => { const d = e.target.closest('[data-i]'); if (!d) return; sel = rects[+d.dataset.i].name; LQ = {}; draw(); live(); $('#tmhead').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
+    $('#tmlist').innerHTML = '';
+  };
+  // 盤中點進產業：個股漲跌改用即時
+  const live = async () => {
+    if (!sel || per !== 'd' || document.documentElement.classList.contains('share') || !window.RT?.on || !RT.stockLive()) return;
+    const g = (SC.markets[mk]?.d || []).find(x => x.name === sel); if (!g) return;
+    try { const pre = mk === '上市' ? 'tse_' : 'otc_'; LQ = await RT.q(g.top.map(t => `${pre}${t[0]}.tw`)); lqAt = Date.now(); if (sel === g.name) draw(); } catch {}
+  };
+  const seg = (id, f) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); f(b.dataset.v); if (id === '#scM') sel = null; LQ = {}; draw(); live(); };
   seg('#scM', v => mk = v); seg('#scP', v => per = v);
-  draw(); sectorRedraw = draw;
+  draw(); sectorRedraw = () => { draw(); if (Date.now() - lqAt > 15000) live(); };
 }
 // 標題裡的 K線連結：點了直接開圖，不觸發收合
 function sumLinks() { document.querySelectorAll('summary a').forEach(a => a.addEventListener('click', e => e.stopPropagation())); }

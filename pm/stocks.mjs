@@ -151,7 +151,7 @@ for (const [mk, A] of Object.entries(agg)) {
   for (const [p, G] of Object.entries(A)) {
     sector.markets[mk][p] = Object.values(G).map(g => ({
       name: g.name, val: Math.round(g.val), pct: r2(g.cap ? g.wp / g.cap : 0), n: g.n,
-      top: g.st.sort((a, b) => b[2] - a[2]).slice(0, 12).map(x => [x[0], x[1], Math.round(x[2] * 10) / 10, x[3]]),
+      top: g.st.sort((a, b) => b[2] - a[2]).slice(0, 20).map(x => [x[0], x[1], Math.round(x[2] * 10) / 10, x[3]]),
     })).filter(g => g.val > 0).sort((a, b) => b.val - a.val);
   }
 }
