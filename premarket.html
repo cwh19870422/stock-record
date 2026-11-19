@@ -477,10 +477,10 @@ function drawDed(live, isLive) {
     `<p class="note">黃色虛線＝目前指數；紅點＝扣抵值高於現價（壓著均線往下），綠點＝低於現價（均線有機會翻揚）</p>`;
 }
 // 盤中：更新加權指數區塊（大數字、K線最後一根、扣抵）
-function liveIdx(x) {
+function liveIdx(x, post) {
   const ch = x.z - x.y, p = ch / x.y * 100;
   $('#idxBig').innerHTML = `${fmt(x.z, 2)}<small class="${cls(ch)}">${sg(ch, 2)}（${sg(p, 2)}%）</small>`;
-  $('#idxWhen').innerHTML = `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(x.t)}　開 ${fmt(x.o, 0)}　高 ${fmt(x.h, 0)}　低 ${fmt(x.l, 0)}`;
+  $('#idxWhen').innerHTML = `${post ? `${x.d.slice(5).replace('-', '/')} 收盤` : `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(x.t)}`}　開 ${fmt(x.o, 0)}　高 ${fmt(x.h, 0)}　低 ${fmt(x.l, 0)}`;
   const it = window.__TWII;
   if (it && x.d) {
     const b = it.bars.slice(), last = b.at(-1), bar = [x.d, x.o ?? x.z, x.h ?? x.z, x.l ?? x.z, x.z, last[0] === x.d ? last[5] : 0];
@@ -552,7 +552,11 @@ function liveInit(J) {
   if (!RT.on) return;
   const top = (J.top5?.list || []).map(s => s.code);
   const tick = async () => {
-    const st = RT.stockLive(), fs = RT.futSession();
+    // 收盤後、晚上官方資料還沒更新前：一樣抓今天的收盤行情，不要停在昨天
+    const tw = new Date(Date.now() + 8 * 3600e3), today = tw.toISOString().slice(0, 10), mm = tw.getUTCHours() * 60 + tw.getUTCMinutes();
+    const lastDay = Object.keys(J.index || {}).sort().at(-1) || '';
+    const post = !RT.stockLive() && tw.getUTCDay() >= 1 && tw.getUTCDay() <= 5 && mm > 815 && lastDay < today;
+    const st = RT.stockLive() || post, fs = RT.futSession();
     if (!st && fs == null) { $('#live').textContent = ''; return; }
     try {
       let t = '';
@@ -560,7 +564,7 @@ function liveInit(J) {
         const codes = ['tse_t00.tw', 'otc_o00.tw', ...top.map(c => `tse_${c}.tw`), ...Object.keys(IDXN).flatMap(k => [`tse_t${k}.tw`, `otc_o${k}.tw`])];
         const Q = await RT.q(codes);
         const ix = Q.t00;
-        if (ix?.z) { setTile('idx', ix.z, ix.ch); t = ix.t; liveIdx(ix); }
+        if (ix?.z && (!post || ix.d === today)) { setTile('idx', ix.z, ix.ch); t = ix.t; liveIdx(ix, post); }
         top.forEach(c => { const x = Q[c], el = $('#px-' + c); if (x?.z && el) el.innerHTML = `${fmt(x.z, 1)}<div class="${cls(x.ch)}" style="font-size:13px">${sg(x.ch, 1)}（${sg(x.p, 2)}%）</div>`; });
         // 產業熱力圖「日」改成即時漲跌（方塊大小仍用前一天成交值）
         const S = window.__SC;
@@ -574,7 +578,7 @@ function liveInit(J) {
         const f = await RT.fut(fs);
         if (f?.z) { setTile('night', f.z, f.ch, false, `${fs ? '台指期夜盤' : '台指期日盤'} <small>即時</small>`); t = t || RT.hhmmss(f.t); }
       }
-      $('#live').innerHTML = t ? `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}` : '';
+      $('#live').innerHTML = t ? (post ? `今日收盤（${RT.hhmmss(t)}）` : `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}`) : '';
     } catch (e) { $('#live').innerHTML = '<span class="mut">即時連線失敗，稍後重試</span>'; }
   };
   tick(); setInterval(tick, RT.every);
