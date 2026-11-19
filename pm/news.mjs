@@ -2,18 +2,24 @@
 // 鉅亨網、重大訊息、PTT 由 Cloudflare 轉接站即時抓；這三家 Google 會擋轉接站，所以改由這裡每 30 分鐘抓一次
 import fs from 'node:fs';
 
-const UA = { 'User-Agent': 'Mozilla/5.0 (stock-record news)' };
-const SITES = '(site:ctee.com.tw OR site:money.udn.com OR site:cna.com.tw)';
+const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36', 'Accept-Language': 'zh-TW,zh;q=0.9' };
+// Google 會擋帶 site: 的自動查詢，改用「關鍵字＋媒體名稱」查，再依來源過濾
+const MEDIA = ['經濟日報', '中央社', '工商時報'];
 const Q = {
-  tw: [`(台股 OR 股市 OR 個股 OR 法人) ${SITES}`, `(上市 OR 上櫃 OR 營收 OR 外資 OR 投信) ${SITES}`, `(類股 OR 族群 OR 漲停 OR 法說) ${SITES}`],
-  intl: [`(美股 OR 聯準會 OR Fed OR 美債 OR 道瓊 OR 費半) ${SITES}`, `(油價 OR 美元 OR 日圓 OR 關稅 OR 輝達 OR 歐股 OR 陸股) ${SITES}`],
+  tw: MEDIA.flatMap(m => [`台股 ${m}`, `個股 法人 ${m}`]),
+  intl: MEDIA.flatMap(m => [`美股 聯準會 ${m}`]),
 };
 const dec = s => String(s || '').replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, '').trim();
 const srcName = s => /工商|時報|ctee/i.test(s) ? '時報新聞' : /經濟日報|udn/i.test(s) ? '經濟日報' : /中央社|cna/i.test(s) ? '中央社' : s;
 
 async function rss(q) {
-  const r = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:1d')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`, { headers: UA });
+  let r;
+  for (let t = 0; t < 3; t++) {
+    r = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:1d')}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`, { headers: UA });
+    if (r.ok) break;
+    await new Promise(res => setTimeout(res, 4000 + t * 6000));
+  }
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return (await r.text()).split('<item>').slice(1).map(it => {
     const g = t => dec((it.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`)) || [])[1]);
@@ -27,7 +33,7 @@ for (const [k, qs] of Object.entries(Q)) {
   const all = [];
   for (const q of qs) {
     try { all.push(...await rss(q)); } catch (e) { out.log.push(`⚠️ ${k}：${e.message}`); }
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 1500));
   }
   const seen = new Set();
   out[k] = all.sort((a, b) => b.at - a.at).filter(x => { const key = x.t.replace(/\s|《[^》]*》|〈[^〉]*〉/g, '').slice(0, 16); return !seen.has(key) && seen.add(key); }).slice(0, 60);
