@@ -31,6 +31,7 @@ async function twiiBars() {
     const a = await get(`https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`);
     const v = await get(`https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`);
     const amt = new Map((v.data || []).map(r => [roc(r[0]), Math.round(num(r[2]) / 1e8)]));
+    if (k === 0) say(`TWII 官方：${ym} stat=${a.stat} 筆數=${(a.data || []).length} 欄位=${(a.fields || []).join('/')} 量筆數=${amt.size}`);
     (a.data || []).forEach(r => { const d = roc(r[0]); out.push([d, num(r[1]), num(r[2]), num(r[3]), num(r[4]), amt.get(d) || 0]); });
   }
   return out.filter(b => b.slice(1, 5).every(x => x != null)).sort((x, y) => x[0].localeCompare(y[0]));
@@ -75,7 +76,7 @@ const items = [];
 for (const [id, name, sym, group] of list) {
   if (items.some(x => x.id === id)) continue;
   try {
-    let bars = id === 'TWII' ? await twiiBars().catch(() => []) : sym ? await yahoo(sym) : await nightBars();
+    let bars = id === 'TWII' ? await twiiBars().catch(e => { say('⚠️ TWII 官方：' + e.message); return []; }) : sym ? await yahoo(sym) : await nightBars();
     if (id === 'TWII' && bars.length < 100) bars = await yahoo(sym);
     if (!bars.length) throw new Error('沒有資料');
     items.push({ id, name, group, bars });
