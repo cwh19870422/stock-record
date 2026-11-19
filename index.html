@@ -102,6 +102,9 @@ nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid 
 nav .in{display:flex;width:100%;max-width:560px}
 nav button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--sub);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button .i{font-size:22px}
+.embedpg{margin:-14px}
+.embedpg iframe{display:block;width:100%;border:0;background:#0f1a2e}
+body.embedded{overflow:hidden}
 nav button.on{color:var(--accent);font-weight:700}
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:80;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
@@ -186,7 +189,10 @@ nav button.on{color:var(--accent);font-weight:700}
   </header>
 
   <main>
-    <!-- 記錄頁 -->
+    <!-- 盤前、K線頁（內嵌盤前看板與 K線圖）-->
+    <section id="pg-pre" class="embedpg" style="display:none"><iframe id="fr-pre" title="盤前看板" data-src="premarket.html"></iframe></section>
+    <section id="pg-k" class="embedpg" style="display:none"><iframe id="fr-k" title="K線圖" data-src="chart.html"></iframe></section>
+    <!-- 買賣頁（原「記錄」）-->
     <section id="pg-rec">
       <div class="seg buy" id="segBS">
         <button data-v="buy" class="on" onclick="setMode('buy')">買進</button>
@@ -266,7 +272,7 @@ nav button.on{color:var(--accent);font-weight:700}
       </div>
     </section>
 
-    <!-- 觀看頁 -->
+    <!-- 損益頁（原「觀看」）-->
     <section id="pg-view" style="display:none">
       <div class="stats" id="stats"></div>
       <div class="card filters">
@@ -303,8 +309,10 @@ nav button.on{color:var(--accent);font-weight:700}
   <button class="fab" id="fab" onclick="openNote()">＋ 新增筆記</button>
 
   <nav><div class="in">
-    <button id="nav-rec" class="on" onclick="go('rec')"><span class="i">✏️</span>記錄</button>
-    <button id="nav-view" onclick="go('view')"><span class="i">📊</span>觀看</button>
+    <button id="nav-pre" onclick="go('pre')"><span class="i">🌅</span>盤前</button>
+    <button id="nav-k" onclick="go('k')"><span class="i">📈</span>K線</button>
+    <button id="nav-rec" class="on" onclick="go('rec')"><span class="i">✏️</span>買賣</button>
+    <button id="nav-view" onclick="go('view')"><span class="i">📊</span>損益</button>
     <button id="nav-note" onclick="go('note')"><span class="i">📒</span>筆記</button>
   </div></nav>
 </div>
@@ -440,6 +448,8 @@ function start(u){
   unsub.push(U().onSnapshot(d=>{const nf=d.data()&&d.data().noteFolders;FOLDERS=nf||JSON.parse(JSON.stringify(DEF_FOLDERS));const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
   unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
   $('bDate').value=nowLocal(); refresh();
+  let t='pre';try{t=localStorage.getItem('app-tab')||'pre'}catch(e){}
+  if(!$('pg-'+t))t='pre'; go(t);
 }
 let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView();if($('pg-note').style.display!=='none')renderNotes()},30)}
 
@@ -521,12 +531,20 @@ function compute(extraSell){
 }
 
 // ================= 導覽 =================
-function go(p){
-  ['rec','view','note'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
+function go(p,url){
+  ['pre','k','rec','view','note'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
   $('fab').style.display=p==='note'?'block':'none';
-  if(p==='view')renderView();else if(p==='note')renderNotes();else renderSellHolds();
+  document.body.classList.toggle('embedded',p==='pre'||p==='k');
+  if(p==='pre'||p==='k'){const f=$('fr-'+p);if(url)f.src=url;else if(!f.getAttribute('src'))f.src=f.dataset.src;fitFrames();}
+  else if(p==='view')renderView();else if(p==='note')renderNotes();else renderSellHolds();
+  try{localStorage.setItem('app-tab',p)}catch(e){}
   window.scrollTo(0,0);
 }
+// 內嵌頁高度＝畫面扣掉上方標題列與下方選單
+function fitFrames(){const h=innerHeight-document.querySelector('header').offsetHeight-document.querySelector('nav').offsetHeight;document.querySelectorAll('.embedpg iframe').forEach(f=>f.style.height=h+'px')}
+addEventListener('resize',fitFrames);
+// 內嵌頁之間互相跳轉（例如盤前看板點「K線」→ 切到 K線 分頁）
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.appGo)return;go(e.data.appGo,e.data.url)});
 function setMode(m){
   mode=m;const s=$('segBS');s.className='seg '+m;
   s.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===m));
@@ -727,7 +745,7 @@ function renderView(){
       ${r?`<div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div>`:`<div class="meta">${fmt(o.price*o.shares+fee(o.price*o.shares))}</div>`}</div>
       ${rtxt(o)?`<div class="why"><span>${e.k==='b'?'買進原因：':'賣出原因：'}</span>${esc(rtxt(o))}${o.review?`<br><span>檢討：</span>${esc(o.review)}`:''}</div>`:''}
       ${mktHtml(o)}
-      <div class="acts"><button onclick="openEdit('${e.k}','${o.id}')">✎ 修改</button><button onclick="askDel('${e.k}','${o.id}')">刪除</button></div></div>`}).join(''):'<div class="empty">'+(DB.buys.length?'沒有符合的紀錄':'還沒有任何紀錄，先到「記錄」新增一筆買進吧')+'</div>';
+      <div class="acts"><button onclick="openEdit('${e.k}','${o.id}')">✎ 修改</button><button onclick="askDel('${e.k}','${o.id}')">刪除</button></div></div>`}).join(''):'<div class="empty">'+(DB.buys.length?'沒有符合的紀錄':'還沒有任何紀錄，先到「買賣」新增一筆買進吧')+'</div>';
   }
 }
 

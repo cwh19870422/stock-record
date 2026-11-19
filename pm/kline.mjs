@@ -22,6 +22,19 @@ async function yahoo(sym) {
   return [...new Map(bars.map(b => [b[0], b])).values()];
 }
 
+// 加權指數改用證交所官方開高低收（Yahoo 常晚一天、開高低也不準）；量＝成交金額（億）
+async function twiiBars() {
+  const out = [], now = new Date(Date.now() + 8 * 3600e3), get = async u => { await new Promise(r => setTimeout(r, 2500)); return (await fetch(u, { headers: UA })).json(); };
+  const roc = s => { const [y, m, d] = String(s).trim().split('/'); return `${+y + 1911}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; };
+  for (let k = 12; k >= 0; k--) {
+    const ym = ymd(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1))).replace(/-/g, '');
+    const a = await get(`https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`);
+    const v = await get(`https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`);
+    const amt = new Map((v.data || []).map(r => [roc(r[0]), Math.round(num(r[2]) / 1e8)]));
+    (a.data || []).forEach(r => { const d = roc(r[0]); out.push([d, num(r[1]), num(r[2]), num(r[3]), num(r[4]), amt.get(d) || 0]); });
+  }
+  return out.filter(b => b.slice(1, 5).every(x => x != null)).sort((x, y) => x[0].localeCompare(y[0]));
+}
 async function nightBars() {
   const out = {};
   const now = new Date(Date.now() + 8 * 3600e3);
@@ -62,7 +75,8 @@ const items = [];
 for (const [id, name, sym, group] of list) {
   if (items.some(x => x.id === id)) continue;
   try {
-    const bars = sym ? await yahoo(sym) : await nightBars();
+    let bars = id === 'TWII' ? await twiiBars().catch(() => []) : sym ? await yahoo(sym) : await nightBars();
+    if (id === 'TWII' && bars.length < 100) bars = await yahoo(sym);
     if (!bars.length) throw new Error('沒有資料');
     items.push({ id, name, group, bars });
     say(`${name}：${bars.length} 根，最新 ${bars.at(-1)[0]} 收 ${bars.at(-1)[4]}`);
