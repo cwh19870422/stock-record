@@ -79,6 +79,17 @@ details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 .share a[href^="chart.html"] .note span[style*="var(--blue)"]{display:none}
 details.dd{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
 details.dd>summary{color:var(--blue);font-size:14px;cursor:pointer}
+.nseg{display:flex;gap:6px;margin:10px 0 4px}
+.nseg button{flex:1;background:#0f1a2e;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:6px 0;font-size:14px;cursor:pointer}
+.nseg button.on{background:#26375a;color:var(--tx);font-weight:700;border-color:#3DA5FF}
+.ni{padding:9px 0;border-bottom:1px solid #22314f}
+.ni a.t{color:var(--tx);text-decoration:none;font-size:15px;line-height:1.45}
+.ni .m{font-size:12px;color:var(--mut);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pin{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 5px;margin-right:5px;vertical-align:1px}
+.pin.mk{background:#3a2a10;color:#f2b84b}.pin.fi{background:#1d2f4d;color:#7cc4ff}.pin.in{background:#2d2140;color:#c9a7ff}
+.stk{border:1px solid #5a4a1f;color:#f2b84b;border-radius:6px;padding:0 5px;text-decoration:none;font-size:12px}
+.push{font-weight:700;min-width:22px;display:inline-block}
+.nmore{width:100%;margin-top:8px;background:#0f1a2e;color:var(--blue);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -217,7 +228,6 @@ async function main() {
   try { J = await (await fetch('pm/data.json?t=' + Date.now())).json(); }
   catch { $('#app').innerHTML = '<div class="err">資料還沒準備好，請稍後再試</div>'; return; }
   try { KL = await (await fetch('pm/kline.json?t=' + Date.now())).json(); } catch {}
-  let NW = null; try { NW = await (await fetch('pm/news.json?t=' + Date.now())).json(); } catch {}
   let SC = null; try { SC = await (await fetch('pm/sector.json?t=' + Date.now())).json(); } catch {}
   const kItem = id => KL.items.find(x => x.id === id);
   const days = J.days, last = days.at(-1);
@@ -341,16 +351,11 @@ async function main() {
       <div class="seg" id="scP">${[['d', '日'], ['w', '週'], ['m', '月'], ['q', '季'], ['y', '年']].map(([v, t], i) => `<button data-v="${v}"${i ? '' : ' class="on"'}>${t}</button>`).join('')}</div>
       <div class="tm" id="tm"></div><div class="tmlist" id="tmlist"></div></section>`;
   }
-  // 8. 國際重大經濟新聞
-  if (NW?.topics?.length) {
-    const ago = t => { const m = (Date.now() - t) / 6e4; return !t ? '' : m < 60 ? Math.round(m) + ' 分鐘前' : m < 1440 ? Math.round(m / 60) + ' 小時前' : Math.round(m / 1440) + ' 天前'; };
-    const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const total = NW.topics.reduce((n, t) => n + t.items.length, 0);
-    h += `<section id="news"><h2>🌍 國際重大經濟新聞</h2><div class="big" style="font-size:15px">${NW.topics.map(t => t.name.split(' ')[1]).join('・')}</div>
-      <p class="note">近 2 天｜共 ${total} 則｜更新 ${NW.updated}</p>
-      ${NW.topics.map(t => `<details class="nw"><summary>${t.name}（${t.items.length}）</summary><ul>${t.items.map(x => `<li><a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.t)}</a><span>${esc(x.s)}　${ago(x.time)}</span></li>`).join('') || '<li class="mut">目前沒有新聞</li>'}</ul></details>`).join('')}
-      <div class="how"><b>怎麼看：</b>新聞當背景參考，不當進出主因；看完新聞，再回頭確認夜盤、費半有沒有反應。利空出現但夜盤急殺後拉回＝可能已提前反應。</div></section>`;
-  }
+  // 8. 盤前精選新聞
+  h += `<section id="news"><h2>📰 盤前精選新聞</h2><div class="big" style="font-size:14px;font-weight:600;line-height:1.4" id="newsTop">載入中…</div>
+    <div class="nseg" id="nseg"><button data-t="tw" class="on">台股</button><button data-t="intl">國際</button><button data-t="ann">公告</button><button data-t="ptt">PTT</button></div>
+    <div id="nlist"></div>
+    <div class="how"><b>怎麼看：</b>新聞當背景參考，不當進出主因；看完新聞，再回頭確認夜盤、費半有沒有反應。利空出現但夜盤急殺後拉回＝可能已提前反應。</div></section>`;
   $('#app').innerHTML = `<div class="tools"><button id="openAll">全部展開</button><button id="closeAll">全部收合</button></div>` + h;
   // 每一區改成可收合（預設收合，只顯示標題＋最新數字）
   let saved = {}; try { saved = JSON.parse(localStorage.getItem('pm-open') || '{}'); } catch {}
@@ -369,6 +374,7 @@ async function main() {
   });
   sumLinks();
   window.__SC = SC;
+  newsInit();
   setTimeout(() => drawDed(), 0);
   if (SC) sectorInit(SC);
   liveInit(J);
@@ -463,6 +469,56 @@ function liveIdx(x) {
     $('#idxK').innerHTML = minik({ ...it, bars: b });
   }
   drawDed(x.z, true);
+}
+// ---- 盤前精選新聞 ----
+const NEWS_API = 'https://tw-rt.cwh19870422.workers.dev/news?t=';
+let NS = { tab: 'tw', data: {}, list: [], last: {}, show: 25 };
+const escH = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ago = t => { const m = (Date.now() - t) / 6e4; return !t ? '' : m < 1 ? '剛剛' : m < 60 ? Math.round(m) + ' 分鐘前' : m < 1440 ? Math.round(m / 60) + ' 小時前' : `${new Date(t).getMonth() + 1}/${new Date(t).getDate()}`; };
+const PINS = [['mk', '大盤', /台股|加權|大盤|櫃買|萬點|集中市場|盤中速報|收盤|開盤/], ['fi', '法人', /外資|投信|自營商|法人|國安基金/], ['in', '國際', /美股|Fed|聯準會|道瓊|那斯達克|費半|美債|油價|美元|日圓|川普|關稅/]];
+function tagStocks(x) {
+  const codes = new Set(x.st || []);
+  let rest = x.t; // 長名稱先比對，比對到就挖掉，避免「聯發科」又被當成「聯發」
+  if (codes.size < 3 && NS.names) for (const [n, c] of NS.names) { if (codes.size >= 3) break; if (rest.includes(n)) { codes.add(c); rest = rest.split(n).join('□'); } }
+  (x.t.match(/\b\d{4}\b/g) || []).forEach(c => NS.byCode?.has(c) && codes.size < 3 && codes.add(c));
+  return [...codes].filter(c => /^\d{4}$/.test(c)).slice(0, 4);
+}
+async function newsLoad(t) {
+  const get = async u => { try { return await (await fetch(u, { cache: 'no-store' })).json(); } catch { return null; } };
+  const [live, slow] = await Promise.all([get(NEWS_API + t), (t === 'tw' || t === 'intl') ? get('pm/news.json?t=' + Math.floor(Date.now() / 6e5)) : null]);
+  const all = [...(live?.items || []), ...((slow && Array.isArray(slow[t])) ? slow[t] : [])];
+  const seen = new Set();
+  NS.data[t] = all.filter(x => x && x.t).sort((a, b) => b.at - a.at).filter(x => { const k = x.t.replace(/\s|《[^》]*》|〈[^〉]*〉/g, '').slice(0, 16); return !seen.has(k) && seen.add(k); })
+    .map(x => ({ ...x, codes: t === 'ptt' ? [] : tagStocks(x), pin: t === 'tw' ? PINS.find(p => p[2].test(x.t)) : null }));
+}
+function newsDraw() {
+  const t = NS.tab, arr = NS.data[t] || [];
+  $('#nseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  if (!arr.length) { $('#nlist').innerHTML = '<p class="note">目前抓不到新聞，稍後再試</p>'; return; }
+  // 盤前精選：台股分頁把 3 小時內的大盤／法人／國際消息置頂（最多 5 則）
+  let list = arr;
+  if (t === 'tw') { const pinned = arr.filter(x => x.pin && Date.now() - x.at < 3 * 3600e3).slice(0, 5); list = [...pinned, ...arr.filter(x => !pinned.includes(x))]; }
+  const share = document.documentElement.classList.contains('share');
+  const chip = c => { const n = NS.byCode?.get(c)?.[1] || c, q = NS.last[c]; const pc = q?.p; return `<${share ? 'span' : `a href="chart.html?s=${c}"`} class="stk">${escH(n)}${pc != null ? ` <b class="${cls(pc)}">${sg(pc, 1)}%</b>` : ''}</${share ? 'span' : 'a'}>`; };
+  const pushB = p => { if (!p) return ''; const n = p === '爆' ? 100 : /^X/.test(p) ? -1 : +p; return `<span class="push" style="color:${n >= 100 ? '#ff5a5a' : n >= 10 ? '#f2b84b' : n < 0 ? '#93a3bf' : '#5aa9ff'}">${escH(p)}</span>`; };
+  $('#nlist').innerHTML = list.slice(0, NS.show).map(x => `<div class="ni">${t === 'ptt' ? pushB(x.push) + ' ' : ''}${x.pin ? `<span class="pin ${x.pin[0]}">${x.pin[1]}</span>` : ''}<a class="t" href="${escH(x.u)}" target="_blank" rel="noopener">${escH(x.t)}</a>
+    <div class="m"><span>${escH(x.s)}</span><span>${ago(x.at)}</span>${x.codes.map(chip).join('')}</div></div>`).join('') +
+    (list.length > NS.show ? `<button class="nmore" id="nmore">顯示更多（還有 ${list.length - NS.show} 則）</button>` : '');
+  const m = $('#nmore'); if (m) m.onclick = () => { NS.show += 25; newsDraw(); };
+  if (t === 'tw') { const top = list[0]; $('#newsTop').innerHTML = top ? `${top.pin ? `<span class="pin ${top.pin[0]}">${top.pin[1]}</span>` : ''}${escH(top.t)} <span class="mut" style="font-weight:400;font-size:12px">${escH(top.s)}・${ago(top.at)}</span>` : ''; }
+}
+async function newsLive() { // 相關個股漲跌：盤中用即時報價
+  if (!RT.on || !RT.stockLive()) return;
+  const codes = [...new Set((NS.data[NS.tab] || []).slice(0, NS.show).flatMap(x => x.codes))].slice(0, 120);
+  if (!codes.length) return;
+  try { const Q = await RT.q(codes.map(c => `${NS.byCode?.get(c)?.[2] === '上櫃' ? 'otc' : 'tse'}_${c}.tw`)); Object.values(Q).forEach(x => { if (x.p != null) NS.last[x.c] = { p: x.p }; }); newsDraw(); } catch {}
+}
+async function newsInit() {
+  try { const L = await (await fetch('k/list.json')).json(); NS.byCode = new Map(L.map(x => [x[0], x])); NS.names = L.filter(x => /^\d{4}$/.test(x[0]) && x[1].replace(/\*|-KY|-DR/g, '').length >= 2).map(x => [x[1].replace(/\*/g, ''), x[0]]).sort((a, b) => b[0].length - a[0].length); } catch {}
+  try { NS.last = Object.fromEntries(Object.entries(await (await fetch('k/last.json')).json()).map(([c, v]) => [c, { p: v[1] }])); } catch {}
+  $('#nseg').onclick = async e => { const b = e.target.closest('button'); if (!b) return; NS.tab = b.dataset.t; NS.show = 25; if (!NS.data[NS.tab]) { $('#nlist').innerHTML = '<p class="note">載入中…</p>'; await newsLoad(NS.tab); } newsDraw(); newsLive(); };
+  await newsLoad('tw'); newsDraw(); newsLive();
+  setInterval(async () => { if (document.hidden) return; await newsLoad(NS.tab); newsDraw(); newsLive(); }, 60000);
 }
 // ---- 盤中即時更新（需先設定 pm/rt.js 的轉接站網址）----
 const IDXN = { '01': '水泥工業', '02': '食品工業', '03': '塑膠工業', '04': '紡織纖維', '05': '電機機械', '06': '電器電纜', '08': '玻璃陶瓷', '09': '造紙工業', '10': '鋼鐵工業', '11': '橡膠工業', '12': '汽車工業', '14': '建材營造', '15': '航運業', '16': '觀光餐旅', '17': '金融保險', '18': '貿易百貨', '20': '其他', '21': '化學工業', '22': '生技醫療', '23': '油電燃氣', '24': '半導體業', '25': '電腦週邊', '26': '光電業', '27': '通信網路', '28': '電子零組件', '29': '電子通路', '30': '資訊服務', '31': '其他電子', '32': '文化創意' };

@@ -125,6 +125,10 @@ for (const [url, m] of [['https://openapi.twse.com.tw/v1/opendata/t187ap03_L', '
 // 搜尋清單補上產業別：[代號, 名稱, 上市/上櫃, 產業]
 list.forEach(x => { x[3] = meta.get(x[0])?.ind || x[3] || ''; });
 fs.writeFileSync('k/list.json', JSON.stringify(list));
+// 每檔最新收盤與漲跌幅（新聞標籤用）→ k/last.json
+const last = {};
+for (const [c] of list) { const o = read(c); if (o?.b?.length >= 2) { const a = o.b.at(-1), b = o.b.at(-2); last[c] = [a[4], r2((a[4] / b[4] - 1) * 100)]; } }
+fs.writeFileSync('k/last.json', JSON.stringify(last));
 const PER = { d: 1, w: 5, m: 20, q: 60, y: 240 };
 const agg = {};
 for (const [c, nm, mk] of list) {

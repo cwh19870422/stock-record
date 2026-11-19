@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['pm/fetch.mjs', 'pm/kline.mjs', 'pm/news.mjs', 'pm/watch.json', '.github/workflows/premarket.yml']
+    paths: ['pm/fetch.mjs', 'pm/kline.mjs', 'pm/watch.json', '.github/workflows/premarket.yml']
 
 permissions:
   contents: write
@@ -29,13 +29,11 @@ jobs:
         run: node pm/fetch.mjs
       - name: 抓K線
         run: node pm/kline.mjs
-      - name: 抓新聞
-        run: node pm/news.mjs
       - name: 存檔
         run: |
           git config user.name "stock-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add pm/data.json pm/kline.json pm/news.json
+          git add pm/data.json pm/kline.json
           git diff --cached --quiet && exit 0
           git commit -m "盤前看板資料 $(TZ=Asia/Taipei date '+%F %H:%M')"
           for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
