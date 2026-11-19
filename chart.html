@@ -47,6 +47,8 @@ details.box>summary{cursor:pointer;color:var(--mut);font-size:13px;padding:2px 6
 details.box>summary::-webkit-details-marker{display:none}
 details.box>summary::before{content:'▶ ';font-size:10px}
 details.box[open]>summary::before{content:'▼ '}
+.wvb{pointer-events:auto;margin-left:6px;background:#17243d;color:#93a3bf;border:1px solid #26375a;border-radius:99px;padding:1px 10px;font-size:12px;cursor:pointer;font-style:normal}
+.wvb.on{background:#F0E442;color:#1a1a1a;border-color:#F0E442;font-weight:700}
 </style>
 </head>
 <body>
@@ -58,7 +60,7 @@ details.box[open]>summary::before{content:'▼ '}
 <main>
   <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="simBtn" style="margin-left:auto;background:#17243d;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div></div>
+  <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i><button id="wvBtn" class="wvb">頭／底</button></div><div id="main"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
   <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ DIF</i><i style="color:#5aa9ff">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
   <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
@@ -135,6 +137,27 @@ charts.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
 }));
 
 let DATA, cur;
+// ---- 頭／底標示（5MA 轉折波：收盤跌破 5MA 往左取最高點為頭；收盤突破 5MA 往左取最低點為底，含影線）----
+let WV = (() => { try { return localStorage.getItem('k-waves') === '1'; } catch { return false; } })();
+function waves(B) {
+  const C = B.map(b => b[4]), out = []; let st = null, seg = 4;
+  const m5 = i => (C[i] + C[i - 1] + C[i - 2] + C[i - 3] + C[i - 4]) / 5;
+  for (let i = 4; i < B.length; i++) {
+    const up = C[i] >= m5(i);
+    if (st === null) { st = up; seg = i; continue; }
+    if (st && !up) { let k = seg; for (let j = seg; j <= i; j++) if (B[j][2] >= B[k][2]) k = j; out.push({ t: 'H', i: k, v: B[k][2] }); st = false; seg = i; }
+    else if (!st && up) { let k = seg; for (let j = seg; j <= i; j++) if (B[j][3] <= B[k][3]) k = j; out.push({ t: 'L', i: k, v: B[k][3] }); st = true; seg = i; }
+  }
+  return out;
+}
+function drawWaves(B) {
+  const b = document.getElementById('wvBtn'); if (b) b.classList.toggle('on', WV);
+  if (!WV || !B) { S.candle.setMarkers([]); return; }
+  const f = v => v >= 1000 ? Math.round(v) : +v.toFixed(2);
+  S.candle.setMarkers(waves(B).map(w => w.t === 'H'
+    ? { time: B[w.i][0], position: 'aboveBar', color: '#ff8a8a', shape: 'arrowDown', text: `頭 ${f(w.v)}` }
+    : { time: B[w.i][0], position: 'belowBar', color: '#5aa9ff', shape: 'arrowUp', text: `底 ${f(w.v)}` }));
+}
 const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
 
 let LIST = [];
@@ -158,6 +181,7 @@ async function show(id, keep = false) {
   S.candle.applyOptions({ priceFormat: { type: 'price', precision: prec, minMove: prec ? 0.01 : 1 } });
   [S.dif, S.sig, S.osc].forEach(x => x.applyOptions({ priceFormat: { type: 'price', precision: prec ? 2 : 0, minMove: prec ? 0.01 : 1 } }));
   S.candle.setData(B.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
+  drawWaves(B);
   const hasVol = V.some(v => v > 0);
   S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#ff5a5a55' : '#2ecc7155' } : { time: b[0] }));
   S.ma5.setData(ser(T, m5)); S.ma10.setData(ser(T, m10)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
@@ -251,6 +275,7 @@ function drawStar() {
 }
 $('#star').onclick = () => { const c = starCode(); if (c) WL.pick(c, cur.name, drawStar); };
 WL.load().then(drawStar);
+document.getElementById('wvBtn').onclick = () => { WV = !WV; try { localStorage.setItem('k-waves', WV ? '1' : '0'); } catch {} drawWaves(cur?.bars); };
 // ---- 找相似走勢：拿這檔近 N 天收盤的「形狀」跟全部台股比 ----
 let CLOSES = null;
 const zn = a => { const m = a.reduce((s, x) => s + x, 0) / a.length, sd = Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1; return a.map(x => (x - m) / sd); };
