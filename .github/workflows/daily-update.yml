@@ -3,6 +3,8 @@ name: 每日更新（股票清單／收盤價／大盤／新聞）
 on:
   schedule:
     - cron: '35 8 * * 1-5'   # 台北 16:35（週一～五）
+    - cron: '35 9 * * 1-5'   # 台北 17:35 補跑（GitHub 排程常延遲）
+    - cron: '35 10 * * 1-5'  # 台北 18:35 補跑
     - cron: '50 11 * * *'    # 台北 19:50（每天，補抓新聞）
   workflow_dispatch:
   push:
@@ -33,4 +35,6 @@ jobs:
           git config user.name "stock-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data
-          git diff --cached --quiet || (git commit -m "每日資料更新 $(TZ=Asia/Taipei date +%F)" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -qm "每日資料更新 $(TZ=Asia/Taipei date +%F)"
+          for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep 8; done
