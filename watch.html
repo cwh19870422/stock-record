@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>自選股</title>
+<meta name="theme-color" content="#0f1a2e">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#0f1a2e;--card:#17243d;--line:#26375a;--tx:#e8eef8;--mut:#93a3bf;--up:#ff5a5a;--dn:#2ecc71;--acc:#F0E442;--blue:#5aa9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:40px}
+header{position:sticky;top:0;z-index:5;background:rgba(15,26,46,.97);padding:calc(8px + env(safe-area-inset-top)) 12px 0;border-bottom:1px solid var(--line)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+h1{margin:0;font-size:19px}
+.nav a{color:var(--blue);text-decoration:none;font-size:13px;margin-left:10px}
+.sub{font-size:12px;color:var(--mut)}
+.up{color:var(--up)} .dn{color:var(--dn)} .mut{color:var(--mut)}
+.cats{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;scrollbar-width:none}
+.cats::-webkit-scrollbar,.grps::-webkit-scrollbar{display:none}
+.cats button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:99px;padding:5px 14px;font-size:14px;cursor:pointer}
+.cats button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:700}
+.grps{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.grps button{flex:none;background:none;color:var(--mut);border:0;border-bottom:3px solid transparent;padding:7px 12px;font-size:15px;cursor:pointer}
+.grps button.on{color:var(--tx);font-weight:700;border-bottom-color:var(--acc)}
+.cats button.add,.grps button.add{color:var(--blue);border-style:dashed}
+main{max-width:760px;margin:0 auto;padding:10px}
+.bar{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.bar button{background:var(--card);color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+.bar button.on{color:var(--tx);border-color:var(--blue)}
+.srch{position:relative;flex:1}
+.srch input{width:100%;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:16px}
+.sug{position:absolute;left:0;right:0;top:42px;background:#1d2c48;border:1px solid var(--line);border-radius:10px;z-index:9;max-height:280px;overflow:auto;display:none}
+.sug div{padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.sug div span{color:var(--mut);font-size:12px;margin-left:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 12px 6px;margin-bottom:10px}
+.card .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card .nm{font-size:18px;font-weight:800;color:var(--tx);text-decoration:none}
+.card .nm small{font-size:13px;color:var(--mut);font-weight:500;margin-left:4px}
+.card .ind{display:inline-block;font-size:12px;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:6px;padding:0 6px;margin-left:6px;vertical-align:2px}
+.card .px{font-size:24px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+.card .px small{font-size:15px;font-weight:600;margin-left:8px}
+.card .meta{font-size:13px;color:var(--mut);display:flex;gap:12px;flex-wrap:wrap}
+.card .more{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;font-size:15px;padding:3px 10px;cursor:pointer}
+.card svg{width:100%;height:auto;display:block;margin-top:4px}
+.live{font-size:11px;color:var(--up)}
+.empty{text-align:center;color:var(--mut);padding:40px 10px;line-height:1.9}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>⭐ 自選股</h1><div class="nav"><a href="premarket.html">盤前看板</a><a href="chart.html">K線圖</a><a href="#" id="setBtn">⚙️ 設定</a></div></div>
+  <div class="sub"><span id="sync">同步中…</span> <span id="live"></span></div>
+  <div class="cats" id="cats"></div>
+  <div class="grps" id="grps"></div>
+</header>
+<main>
+  <div class="bar"><div class="srch"><input id="q" placeholder="搜尋股票加入這個分類" autocomplete="off" enterkeyhint="search"><div class="sug" id="sug"></div></div></div>
+  <div class="bar" id="sort"><span class="mut" style="font-size:13px">排序</span><button data-k="none" class="on">加入順序</button><button data-k="p">漲跌幅</button><button data-k="c">股價</button><button data-k="v">成交量</button></div>
+  <div id="list"></div>
+</main>
+<script src="pm/rt.js"></script>
+<script src="pm/wl.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 0) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+const sg = (v, d = 0) => v == null || isNaN(v) ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : '') + fmt(Math.abs(v), d);
+const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
+const md = d => d ? d.slice(5).replace('-', '/') : '';
+const esc = WL.esc;
+const MAS = [{ k: 5, c: '#F0E442', w: 1.6 }, { k: 20, c: '#3DA5FF', w: 2 }];
+let LIST = [], INFO = new Map(), K = {}, RTQ = {};
+let cat = null, grp = null, sortK = 'none', sortDir = -1;
+try { const s = JSON.parse(localStorage.getItem('wl-view') || '{}'); cat = s.cat; grp = s.grp; } catch {}
+const saveView = () => { try { localStorage.setItem('wl-view', JSON.stringify({ cat, grp })); } catch {} };
+
+// ---- 迷你K線（近 40 天、5MA／20MA、成交量）----
+function minik(bars, n = 40, h = 150) {
+  const C = bars.map(b => b[4]);
+  const ma = k => C.map((_, i) => i + 1 < k ? null : C.slice(i + 1 - k, i + 1).reduce((a, b) => a + b, 0) / k).slice(-n);
+  const M = MAS.map(m => ({ ...m, v: ma(m.k) })), B = bars.slice(-n), hasVol = B.some(b => b[5] > 0);
+  const W = 340, R = 44, top = 6, bot = 14, volH = hasVol ? (h - top - bot) * .2 : 0, pH = h - top - bot - volH - 3, cw = (W - R) / B.length;
+  const vals = B.flatMap(b => [b[2], b[3]]).concat(...M.map(m => m.v)).filter(v => v != null);
+  const mx = Math.max(...vals), mn = Math.min(...vals), y = v => top + (mx - v) / (mx - mn || 1) * pH;
+  const vMax = Math.max(...B.map(b => b[5])) || 1, vB = h - bot, f = v => fmt(v, mx >= 1000 ? 0 : mx >= 100 ? 1 : 2);
+  let s = `<svg viewBox="0 0 ${W} ${h}">`;
+  [mx, (mx + mn) / 2, mn].forEach(v => s += `<line x1="0" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#1f2e4a"/><text x="${W - R + 3}" y="${y(v) + 3}" font-size="9" fill="#93a3bf">${f(v)}</text>`);
+  B.forEach((b, i) => {
+    const x = i * cw + cw / 2, c = b[4] >= b[1] ? '#ff5a5a' : '#2ecc71', y1 = y(Math.max(b[1], b[4])), y2 = y(Math.min(b[1], b[4]));
+    s += `<line x1="${x}" x2="${x}" y1="${y(b[2])}" y2="${y(b[3])}" stroke="${c}"/><rect x="${x - cw * .35}" y="${y1}" width="${cw * .7}" height="${Math.max(1, y2 - y1)}" fill="${c}"/>`;
+    if (hasVol) { const vh = b[5] / vMax * volH; s += `<rect x="${x - cw * .35}" y="${vB - vh}" width="${cw * .7}" height="${vh}" fill="${c}" opacity=".4"/>`; }
+  });
+  const path = a => a.map((v, i) => v == null ? '' : `${i * cw + cw / 2},${y(v)}`).filter(Boolean).join(' ');
+  M.forEach(m => s += `<polyline points="${path(m.v)}" fill="none" stroke="${m.c}" stroke-width="${m.w}"/>`);
+  s += `<text x="0" y="${h - 2}" font-size="9" fill="#93a3bf">${md(B[0][0])}</text><text x="${W - R}" y="${h - 2}" font-size="9" text-anchor="end" fill="#93a3bf">${md(B.at(-1)[0])}</text>`;
+  return s + '</svg>';
+}
+async function getK(code) {
+  if (K[code]) return K[code];
+  try { K[code] = await (await fetch(`k/${code}.json`)).json(); } catch { K[code] = null; }
+  return K[code];
+}
+// 把即時報價併進最後一根K棒
+function barsOf(code) {
+  const o = K[code]; if (!o) return null;
+  const b = o.b.slice(), x = RTQ[code];
+  if (x?.z && x.d) { const nb = [x.d, x.o ?? x.z, x.h ?? x.z, x.l ?? x.z, x.z, x.v ?? 0]; if (b.at(-1)[0] === x.d) b[b.length - 1] = nb; else if (b.at(-1)[0] < x.d) b.push(nb); }
+  return b;
+}
+function stat(code) {
+  const b = barsOf(code); if (!b || b.length < 2) return {};
+  const l = b.at(-1), p = b.at(-2), x = RTQ[code];
+  const prev = x?.y ?? p[4];
+  return { c: l[4], ch: l[4] - prev, p: (l[4] / prev - 1) * 100, v: l[5], d: l[0], live: !!x?.z };
+}
+
+// ---- 畫面 ----
+function drawTabs() {
+  const D = WL.data;
+  if (!D.cats.find(c => c.id === cat)) cat = D.cats[0].id;
+  const C = D.cats.find(c => c.id === cat);
+  if (!C.groups.find(g => g.id === grp)) grp = C.groups[0]?.id;
+  $('#cats').innerHTML = D.cats.map(c => `<button data-c="${c.id}" class="${c.id === cat ? 'on' : ''}">📁 ${esc(c.name)}</button>`).join('') + `<button class="add" data-addcat>＋ 大分類</button>`;
+  $('#grps').innerHTML = C.groups.map(g => `<button data-g="${g.id}" class="${g.id === grp ? 'on' : ''}">${esc(g.name)} <span class="mut" style="font-size:12px">${g.codes.length}</span></button>`).join('') + `<button class="add" data-addgrp>＋ 分類</button>`;
+  saveView();
+}
+async function drawList() {
+  const g = WL.findG(grp);
+  if (!g) { $('#list').innerHTML = ''; return; }
+  if (!g.codes.length) { $('#list').innerHTML = `<div class="empty">這個分類還沒有股票<br>在上面的搜尋框輸入代號或名稱加入<br>或在 K線圖頁按「☆ 加入自選」</div>`; return; }
+  await Promise.all(g.codes.map(getK));
+  let codes = g.codes.slice();
+  if (sortK !== 'none') codes.sort((a, b) => ((stat(b)[sortK] ?? -1e9) - (stat(a)[sortK] ?? -1e9)) * (sortDir === -1 ? 1 : -1));
+  $('#list').innerHTML = codes.map(code => {
+    const o = K[code], inf = INFO.get(code), s = stat(code), b = barsOf(code);
+    if (!o) return `<div class="card"><div class="hd"><span class="nm">${code}</span><button class="more" data-m="${code}">⋯</button></div><p class="mut">找不到K線資料</p></div>`;
+    return `<div class="card" id="c-${code}"><div class="hd"><div><a class="nm" href="chart.html?s=${code}">${esc(o.n)}<small>${code}</small></a>${inf?.[3] ? `<span class="ind">${esc(inf[3])}</span>` : ''}
+      <div class="px ${cls(s.ch)}">${fmt(s.c, s.c >= 100 ? 1 : 2)}<small>${sg(s.ch, 2)}（${fmt(Math.abs(s.p), 2)}%）</small></div>
+      <div class="meta"><span>量 ${fmt(s.v)} 張</span><span>${o.m || ''}</span><span>${s.live ? '<span class="live">● 即時</span>' : md(s.d) + ' 收盤'}</span></div></div>
+      <button class="more" data-m="${code}" aria-label="分類設定">⋯</button></div>
+      <a href="chart.html?s=${code}">${minik(b)}</a></div>`;
+  }).join('');
+}
+const redraw = () => { drawTabs(); drawList(); };
+
+// ---- 互動 ----
+$('#cats').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.addcat != null) return ask('新增大分類', '例如：長線存股、短線波段', v => { const c = WL.addCat(v); cat = c.id; grp = c.groups[0].id; redraw(); });
+  cat = b.dataset.c; grp = null; redraw();
+};
+$('#grps').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.addgrp != null) return ask('新增分類', '例如：等回後買上漲', v => { const g = WL.addGroup(cat, v); grp = g.id; redraw(); });
+  grp = b.dataset.g; redraw();
+};
+$('#sort').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.k === sortK && sortK !== 'none') sortDir *= -1; else { sortK = b.dataset.k; sortDir = -1; }
+  $('#sort').querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.textContent = x.textContent.replace(/[↓↑]/g, '') + (x === b && sortK !== 'none' ? (sortDir === -1 ? '↓' : '↑') : ''); });
+  drawList();
+};
+$('#list').onclick = e => {
+  const b = e.target.closest('[data-m]'); if (!b) return;
+  const code = b.dataset.m, n = K[code]?.n || code;
+  WL.modal(`<h3>${esc(n)} ${code}</h3>
+    <div class="row"><button class="pri" id="mv" style="flex:1">加入／移到其他分類…</button></div>
+    <div class="row"><button class="del" id="rm" style="flex:1;border:1px solid #5a2b2b">從「${esc(WL.findG(grp)?.name)}」移除</button></div>
+    <div class="foot"><button id="cx">取消</button></div>`, (m, close) => {
+    m.querySelector('#cx').onclick = close;
+    m.querySelector('#rm').onclick = () => { WL.setMembership(code, WL.groupsOf(code).filter(x => x !== grp)); close(); redraw(); };
+    m.querySelector('#mv').onclick = () => { close(); WL.pick(code, n, redraw); };
+  });
+};
+function ask(title, ph, ok, val = '') {
+  WL.modal(`<h3>${title}</h3><div class="row"><input type="text" id="av" placeholder="${ph}" value="${esc(val)}"></div><div class="foot"><button id="ac">取消</button><button class="pri" id="ao">確定</button></div>`, (m, close) => {
+    const i = m.querySelector('#av'); setTimeout(() => i.focus(), 50);
+    const go = () => { const v = i.value.trim(); if (!v) return; close(); ok(v); };
+    m.querySelector('#ac').onclick = close; m.querySelector('#ao').onclick = go; i.onkeydown = e => { if (e.key === 'Enter') go(); };
+  });
+}
+// 設定：改名、刪除、排序大分類與分類；同步連結
+$('#setBtn').onclick = e => { e.preventDefault(); settings(); };
+function settings() {
+  const D = WL.data;
+  const body = () => D.cats.map((c, ci) => `<div class="cat" style="display:flex;align-items:center;gap:4px">📁 <b style="color:#e8eef8">${esc(c.name)}</b>
+      <button class="del" data-rc="${ci}" style="color:#7cc4ff">改名</button>${ci ? `<button class="del" data-uc="${ci}" style="color:#93a3bf">↑</button>` : ''}${D.cats.length > 1 ? `<button class="del" data-dc="${ci}">刪除</button>` : ''}</div>
+    ${c.groups.map((g, gi) => `<label style="justify-content:space-between"><span>${esc(g.name)} <span class="mut" style="font-size:12px">${g.codes.length} 檔</span></span><span>
+      <button class="del" data-rg="${ci}.${gi}" style="color:#7cc4ff">改名</button>${gi ? `<button class="del" data-ug="${ci}.${gi}" style="color:#93a3bf">↑</button>` : ''}${c.groups.length > 1 ? `<button class="del" data-dg="${ci}.${gi}">刪除</button>` : ''}</span></label>`).join('')}`).join('');
+  WL.modal(`<h3>⚙️ 分類管理</h3><div id="sb">${body()}</div>
+    <h3 style="margin-top:18px">🔗 手機電腦同步</h3><p class="mut" style="font-size:13px;margin:0 0 6px">在另一台裝置打開這個連結，就會看到同一份自選清單（連結請勿分享給別人）</p>
+    <div class="row"><input type="text" id="su" readonly value="${WL.syncUrl()}"><button id="sc">複製</button></div>
+    <div class="foot"><button class="pri" id="sd">完成</button></div>`, (m, close) => {
+    const bind = () => {
+      const q = s => m.querySelectorAll(s);
+      q('[data-rc]').forEach(b => b.onclick = () => { const c = D.cats[+b.dataset.rc]; close(); ask('大分類改名', '', v => { c.name = v; WL.save(); redraw(); settings(); }, c.name); });
+      q('[data-rg]').forEach(b => b.onclick = () => { const [ci, gi] = b.dataset.rg.split('.').map(Number), g = D.cats[ci].groups[gi]; close(); ask('分類改名', '', v => { g.name = v; WL.save(); redraw(); settings(); }, g.name); });
+      q('[data-uc]').forEach(b => b.onclick = () => { const i = +b.dataset.uc; [D.cats[i - 1], D.cats[i]] = [D.cats[i], D.cats[i - 1]]; WL.save(); m.querySelector('#sb').innerHTML = body(); bind(); redraw(); });
+      q('[data-ug]').forEach(b => b.onclick = () => { const [ci, gi] = b.dataset.ug.split('.').map(Number), G = D.cats[ci].groups; [G[gi - 1], G[gi]] = [G[gi], G[gi - 1]]; WL.save(); m.querySelector('#sb').innerHTML = body(); bind(); redraw(); });
+      q('[data-dc]').forEach(b => b.onclick = () => confirmDel(`大分類「${D.cats[+b.dataset.dc].name}」和裡面所有分類`, () => { D.cats.splice(+b.dataset.dc, 1); WL.save(); redraw(); settings(); }, close));
+      q('[data-dg]').forEach(b => b.onclick = () => { const [ci, gi] = b.dataset.dg.split('.').map(Number); confirmDel(`分類「${D.cats[ci].groups[gi].name}」`, () => { D.cats[ci].groups.splice(gi, 1); WL.save(); redraw(); settings(); }, close); });
+    };
+    bind();
+    m.querySelector('#sc').onclick = async () => { const i = m.querySelector('#su'); i.select(); try { await navigator.clipboard.writeText(i.value); m.querySelector('#sc').textContent = '已複製'; } catch { document.execCommand('copy'); m.querySelector('#sc').textContent = '已複製'; } };
+    m.querySelector('#sd').onclick = close;
+  });
+}
+function confirmDel(what, ok, closeParent) {
+  closeParent();
+  WL.modal(`<h3>確定刪除${esc(what)}？</h3><p class="mut" style="font-size:13px">裡面的股票清單會一起刪掉，無法復原。</p><div class="foot"><button id="dn">取消</button><button class="pri" id="dy" style="background:#ff5a5a;color:#fff">刪除</button></div>`, (m, close) => {
+    m.querySelector('#dn').onclick = () => { close(); settings(); };
+    m.querySelector('#dy').onclick = () => { close(); ok(); };
+  });
+}
+// 搜尋加入
+const find = v => { v = v.trim(); if (!v) return []; const sc = x => x[0] === v || x[1] === v ? 0 : x[0].startsWith(v) || x[1].startsWith(v) ? 1 : 2; return LIST.filter(x => x[0].startsWith(v) || x[1].includes(v)).sort((a, b) => sc(a) - sc(b) || a[0].localeCompare(b[0])).slice(0, 30); };
+$('#q').oninput = () => { const r = find($('#q').value); $('#sug').innerHTML = r.map(x => { const inG = WL.findG(grp)?.codes.includes(x[0]); return `<div data-c="${x[0]}">${x[0]} ${esc(x[1])}<span>${x[2]}${x[3] ? '・' + esc(x[3]) : ''}</span>${inG ? '<span style="color:#F0E442">已加入</span>' : '<span style="color:#5aa9ff;float:right">＋ 加入</span>'}</div>`; }).join('') || ($('#q').value.trim() ? '<div class="mut">找不到符合的股票</div>' : ''); $('#sug').style.display = $('#sug').innerHTML ? 'block' : 'none'; };
+$('#sug').onclick = e => {
+  const d = e.target.closest('[data-c]'); if (!d) return;
+  const c = d.dataset.c, g = WL.findG(grp);
+  if (g && !g.codes.includes(c)) { WL.setMembership(c, [...WL.groupsOf(c), grp]); }
+  $('#q').value = ''; $('#sug').style.display = 'none'; redraw(); liveTick();
+};
+document.addEventListener('click', e => { if (!e.target.closest('.srch')) $('#sug').style.display = 'none'; });
+
+WL.on((d, s) => { $('#sync').textContent = `☁️ ${s}`; });
+// ---- 盤中即時 ----
+async function liveTick() {
+  if (!RT.on || !RT.stockLive()) { $('#live').textContent = ''; return; }
+  const g = WL.findG(grp); if (!g?.codes.length) return;
+  try {
+    const Q = await RT.q(g.codes.map(c => `${K[c]?.m === '上櫃' || INFO.get(c)?.[2] === '上櫃' ? 'otc' : 'tse'}_${c}.tw`));
+    Object.assign(RTQ, Q);
+    const t = Object.values(Q)[0]?.t;
+    $('#live').innerHTML = t ? `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}` : '';
+    drawList();
+  } catch {}
+}
+(async () => {
+  drawTabs();
+  try { LIST = await (await fetch('k/list.json')).json(); INFO = new Map(LIST.map(x => [x[0], x])); } catch {}
+  await WL.load(); redraw(); liveTick();
+  setInterval(liveTick, RT.every);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { WL.load().then(redraw); liveTick(); } });
+})();
+</script>
+</body>
+</html>

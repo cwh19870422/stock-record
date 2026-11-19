@@ -51,12 +51,12 @@ details.box[open]>summary::before{content:'▼ '}
 </head>
 <body>
 <header>
-  <div class="top"><h1>📈 K線技術分析</h1><a href="premarket.html">← 盤前看板</a></div>
+  <div class="top"><h1>📈 K線技術分析</h1><span><a href="watch.html">⭐ 自選</a>　<a href="premarket.html">盤前看板</a></span></div>
   <div class="srch"><input id="q" placeholder="查詢個股：輸入代號或名稱，例如 2330、長榮" autocomplete="off" enterkeyhint="search"><button id="go">查詢</button><div class="sug" id="sug"></div></div>
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="star" style="margin-left:auto;background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
   <div class="info" id="info">載入中…</div>
   <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
@@ -72,6 +72,7 @@ details.box[open]>summary::before{content:'▼ '}
 
 <script src="pm/lwc.js"></script>
 <script src="pm/rt.js"></script>
+<script src="pm/wl.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let P = 2;
@@ -138,7 +139,8 @@ const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } 
 let LIST = [];
 const STK = {};
 async function show(id, keep = false) {
-  let it = DATA.items.find(x => x.id === id) || STK[id];
+  const isStk = /^\d{4}$|^00\d{2,4}[A-Z]?$/.test(id || '');
+  let it = STK[id] || (isStk ? null : DATA.items.find(x => x.id === id));
   if (!it && id) {
     try {
       const o = await (await fetch(`k/${encodeURIComponent(id)}.json?t=${Date.now()}`)).json();
@@ -165,7 +167,7 @@ async function show(id, keep = false) {
   if (!keep) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
 
   const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
-  $('#name').textContent = it.name;
+  $('#name').textContent = it.name; drawStar();
   $('#close').innerHTML = `<span class="${cl}">${fmt(C[i])}</span>`;
   $('#chg').innerHTML = `<span class="${cl}">${ch >= 0 ? '▲' : '▼'}${fmt(Math.abs(ch))}（${p.toFixed(2)}%）</span> <span class="mut" style="font-size:12px">${T[i]}</span>`;
   const info = j => {
@@ -237,6 +239,16 @@ document.querySelectorAll('details.box').forEach(d => {
   q.placeholder = `查詢個股（共 ${LIST.length} 檔）：輸入代號或名稱`;
 })();
 // ---- 盤中即時：更新目前這檔的最後一根 K 棒 ----
+// ---- 加入自選 ----
+const starCode = () => cur && /^\d{4}$|^00\d{2,4}[A-Z]?$/.test(cur.id) ? cur.id : null;
+function drawStar() {
+  const c = starCode(), b = $('#star'); if (!b) return;
+  if (!c) { b.style.display = 'none'; return; }
+  const n = WL.groupsOf(c).length;
+  b.style.display = ''; b.textContent = n ? `★ 已在 ${n} 個分類` : '☆ 加入自選';
+}
+$('#star').onclick = () => { const c = starCode(); if (c) WL.pick(c, cur.name, drawStar); };
+WL.load().then(drawStar);
 const liveTick = async () => {
   if (!cur || !RT.stockLive()) { $('#live').textContent = ''; return; }
   const top = (DATA?.items || []).filter(x => x.group === 'top5' || x.group === 'watch').map(x => x.id);

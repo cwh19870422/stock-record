@@ -10,13 +10,28 @@ export default {
     const origin = req.headers.get('Origin') || '';
     const cors = {
       'Access-Control-Allow-Origin': ALLOW.includes(origin) ? origin : ALLOW[0],
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
       'Vary': 'Origin',
     };
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
     let upstream, init = { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://mis.twse.com.tw/stock/index.jsp' } };
 
+    // 自選股同步：GET/PUT /wl/{同步碼}。同步碼由網頁第一次使用時隨機產生（24 碼以上），資料存在 KV（綁定名稱 WL）
+    const wl = url.pathname.match(/^\/wl\/([A-Za-z0-9_-]{24,64})$/);
+    if (wl) {
+      const k = 'wl:' + wl[1];
+      if (req.method === 'GET') return new Response((await env.WL.get(k)) || '{}', { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors } });
+      if (req.method === 'PUT') {
+        const body = await req.text();
+        if (body.length > 200000) return json({ error: 'too large' }, 413, cors);
+        try { JSON.parse(body); } catch { return json({ error: 'bad json' }, 400, cors); }
+        await env.WL.put(k, body);
+        return json({ ok: true }, 200, cors);
+      }
+      return json({ error: 'method' }, 405, cors);
+    }
     if (url.pathname === '/q') {
       const s = (url.searchParams.get('s') || '').toLowerCase();
       if (!/^[a-z0-9_.|]{5,3000}$/.test(s) || s.split('|').length > 150) return json({ error: 'bad request' }, 400, cors);

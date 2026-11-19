@@ -122,6 +122,9 @@ for (const [url, m] of [['https://openapi.twse.com.tw/v1/opendata/t187ap03_L', '
     if (c) meta.set(c, { m, ind: IND[ind] || null, sh });
   });
 }
+// 搜尋清單補上產業別：[代號, 名稱, 上市/上櫃, 產業]
+list.forEach(x => { x[3] = meta.get(x[0])?.ind || x[3] || ''; });
+fs.writeFileSync('k/list.json', JSON.stringify(list));
 const PER = { d: 1, w: 5, m: 20, q: 60, y: 240 };
 const agg = {};
 for (const [c, nm, mk] of list) {
