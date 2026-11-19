@@ -92,13 +92,6 @@ details.dd>summary{color:var(--blue);font-size:14px;cursor:pointer}
 .stk{border:1px solid #5a4a1f;color:#f2b84b;border-radius:6px;padding:0 5px;text-decoration:none;font-size:12px}
 .push{font-weight:700;min-width:22px;display:inline-block}
 .nmore{width:100%;margin-top:8px;background:#0f1a2e;color:var(--blue);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px;cursor:pointer}
-/* ===== 電腦版：上方 6 格一排、下面兩欄 ===== */
-@media (min-width:900px){
-  main{max-width:1280px}
-  .grid{grid-template-columns:repeat(6,1fr);grid-template-rows:auto;grid-auto-flow:row}
-  #app{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;align-items:start}
-  #app>.tools,#app>.grid,#app>.sum,#app>#news,#app>:not(details){grid-column:1/-1}
-}
 </style>
 </head>
 <body>
