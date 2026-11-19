@@ -34,12 +34,13 @@ for (const p of P) {
     const rise = H[pk] / C[lo] - 1, back = 1 - C[L] / Math.max(...C.slice(pk - 1, L + 1)), days = L - pk;
     const m20 = ma(C, 20, L), m20p = ma(C, 20, L - 5), m5 = ma(C, 5, L);
     const amt = C.slice(-20).reduce((t, x, i) => t + x * V.at(-20 + i), 0) / 20 / 1e5;
-    if (!(rise >= R.rise && back >= R.backMin && back <= R.backMax && days >= R.daysMin && days <= R.daysMax && C[L] > m20 && m20 > m20p && amt >= R.minAmt)) continue;
+    const vol20 = V.slice(-20).reduce((t, x) => t + x, 0) / 20; // 近 20 日平均成交量（張）
+    if (!(rise >= R.rise && back >= R.backMin && back <= R.backMax && days >= R.daysMin && days <= R.daysMax && C[L] > m20 && m20 > m20p && vol20 >= R.minVol && !/^00/.test(s.code))) continue; // 排除 ETF
     const w = C.slice(-N), sim = p.tpl.reduce((t, tp) => t + corr(w, tp), 0) / p.tpl.length;
     if (sim < R.minSim) continue;
     const vr = V.slice(lo, pk + 1).reduce((t, x) => t + x, 0) / (pk - lo + 1), vb = V.slice(pk + 1).reduce((t, x) => t + x, 0) / Math.max(1, days);
     const score = sim * 60 + Math.min(rise, 0.6) * 30 + (vb < vr ? 6 : 0) + (C[L] <= m5 * 1.01 ? 4 : 0);
-    items.push({ code: s.code, name: s.name, mkt: s.mkt, ind: s.ind, d: b.at(-1)[0], c: C[L], rise: r1(rise * 100), back: r1(back * 100), days, sim: r2(sim), volDry: vb < vr, m20d: r1((C[L] / m20 - 1) * 100), amt: r2(amt), score: r1(score) });
+    items.push({ code: s.code, name: s.name, mkt: s.mkt, ind: s.ind, d: b.at(-1)[0], c: C[L], rise: r1(rise * 100), back: r1(back * 100), days, sim: r2(sim), volDry: vb < vr, m20d: r1((C[L] / m20 - 1) * 100), amt: r2(amt), vol: Math.round(vol20), score: r1(score) });
   }
   items.sort((a, b) => b.score - a.score);
   out.patterns.push({ id: p.id, name: p.name, desc: p.desc, from: p.from, items: items.slice(0, 40) });
