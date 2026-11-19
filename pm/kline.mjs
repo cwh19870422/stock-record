@@ -23,18 +23,28 @@ async function yahoo(sym) {
 }
 
 // 加權指數改用證交所官方開高低收（Yahoo 常晚一天、開高低也不準）；量＝成交金額（億）
-async function twiiBars() {
-  const out = [], now = new Date(Date.now() + 8 * 3600e3), get = async u => { await new Promise(r => setTimeout(r, 2500)); return (await fetch(u, { headers: UA })).json(); };
+// 已有官方資料時只補最近 2 個月；證交所偶爾回傳 HTML（太頻繁），就等久一點再換網址重試
+async function twiiBars(prev) {
+  const have = prev?.official ? prev.bars : [];
+  const months = have.length > 200 ? 1 : 12;
+  const now = new Date(Date.now() + 8 * 3600e3);
   const roc = s => { const [y, m, d] = String(s).trim().split('/'); return `${+y + 1911}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; };
-  for (let k = 12; k >= 0; k--) {
+  const get = async paths => {
+    for (let t = 0; t < 4; t++) {
+      await new Promise(r => setTimeout(r, 3000 + t * 5000));
+      try { const j = JSON.parse(await (await fetch('https://www.twse.com.tw' + paths[t % paths.length], { headers: UA })).text()); if (j.stat === 'OK') return j; } catch {}
+    }
+    throw new Error('證交所沒有回應 ' + paths[0]);
+  };
+  const m = new Map(have.map(b => [b[0], b]));
+  for (let k = months; k >= 0; k--) {
     const ym = ymd(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1))).replace(/-/g, '');
-    const a = await get(`https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`);
-    const v = await get(`https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`);
+    const a = await get([`/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`, `/indicesReport/MI_5MINS_HIST?response=json&date=${ym}`]);
+    const v = await get([`/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`, `/exchangeReport/FMTQIK?response=json&date=${ym}`]);
     const amt = new Map((v.data || []).map(r => [roc(r[0]), Math.round(num(r[2]) / 1e8)]));
-    if (k === 0) say(`TWII 官方：${ym} stat=${a.stat} 筆數=${(a.data || []).length} 欄位=${(a.fields || []).join('/')} 量筆數=${amt.size}`);
-    (a.data || []).forEach(r => { const d = roc(r[0]); out.push([d, num(r[1]), num(r[2]), num(r[3]), num(r[4]), amt.get(d) || 0]); });
+    (a.data || []).forEach(r => { const d = roc(r[0]), bar = [d, num(r[1]), num(r[2]), num(r[3]), num(r[4]), amt.get(d) || 0]; if (bar.slice(1, 5).every(x => x != null)) m.set(d, bar); });
   }
-  return out.filter(b => b.slice(1, 5).every(x => x != null)).sort((x, y) => x[0].localeCompare(y[0]));
+  return [...m.values()].sort((x, y) => x[0].localeCompare(y[0])).slice(-300);
 }
 async function nightBars() {
   const out = {};
@@ -76,10 +86,14 @@ const items = [];
 for (const [id, name, sym, group] of list) {
   if (items.some(x => x.id === id)) continue;
   try {
-    let bars = id === 'TWII' ? await twiiBars().catch(e => { say('⚠️ TWII 官方：' + e.message); return []; }) : sym ? await yahoo(sym) : await nightBars();
-    if (id === 'TWII' && bars.length < 100) bars = await yahoo(sym);
+    let bars, official = false;
+    if (id === 'TWII') {
+      bars = await twiiBars(old.items.find(x => x.id === 'TWII')).catch(e => { say('⚠️ 加權官方資料：' + e.message); return []; });
+      official = bars.length >= 100;
+      if (!official) { const keep = old.items.find(x => x.id === 'TWII' && x.official); bars = keep ? keep.bars : await yahoo(sym); official = !!keep; }
+    } else bars = sym ? await yahoo(sym) : await nightBars();
     if (!bars.length) throw new Error('沒有資料');
-    items.push({ id, name, group, bars });
+    items.push({ id, name, group, bars, ...(official ? { official: true } : {}) });
     say(`${name}：${bars.length} 根，最新 ${bars.at(-1)[0]} 收 ${bars.at(-1)[4]}`);
   } catch (e) {
     const keep = old.items.find(x => x.id === id);

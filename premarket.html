@@ -74,6 +74,9 @@ details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 .tm div b{font-weight:800} .tm div.sel{outline:2px solid #F0E442;outline-offset:-3px;z-index:2}
 .tmlist{margin-top:10px} .tmlist a{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line);color:var(--tx);text-decoration:none;font-size:14px}
 .tmlist a span:last-child{font-variant-numeric:tabular-nums}
+.share header a,.share .kl,.share #sector .tmlist a span.mut{display:none!important}
+.share a[href^="chart.html"]{pointer-events:none}
+.share a[href^="chart.html"] .note span[style*="var(--blue)"]{display:none}
 </style>
 </head>
 <body>
@@ -84,6 +87,7 @@ details.nw li span{display:block;font-size:11px;color:var(--mut);margin-top:2px}
 <main id="app"></main>
 <footer>資料：證交所、期交所、Yahoo Finance｜每天 07:20、17:05、21:45 自動更新｜僅供參考，非投資建議</footer>
 
+<script>if (new URLSearchParams(location.search).has('share')) document.documentElement.classList.add('share');</script>
 <script src="pm/embed.js"></script>
 <script src="pm/rt.js"></script>
 <script>
@@ -454,7 +458,7 @@ function setTile(id, v, ch, unitPct, label) {
   if (label) t.querySelector('.k').innerHTML = label;
 }
 function liveInit(J) {
-  if (!RT.on) return;
+  if (!RT.on || document.documentElement.classList.contains('share')) return;
   const top = (J.top5?.list || []).map(s => s.code);
   const tick = async () => {
     const st = RT.stockLive(), fs = RT.futSession();
