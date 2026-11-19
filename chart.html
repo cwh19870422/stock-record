@@ -56,7 +56,7 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="star" style="margin-left:auto;background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="simBtn" style="margin-left:auto;background:#17243d;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
   <div class="info" id="info">載入中…</div>
   <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
@@ -244,12 +244,51 @@ document.querySelectorAll('details.box').forEach(d => {
 const starCode = () => cur && /^\d{4}$|^00\d{2,4}[A-Z]?$/.test(cur.id) ? cur.id : null;
 function drawStar() {
   const c = starCode(), b = $('#star'); if (!b) return;
+  $('#simBtn').style.display = c ? '' : 'none';
   if (!c) { b.style.display = 'none'; return; }
   const n = WL.groupsOf(c).length;
   b.style.display = ''; b.textContent = n ? `★ 已在 ${n} 個分類` : '☆ 加入自選';
 }
 $('#star').onclick = () => { const c = starCode(); if (c) WL.pick(c, cur.name, drawStar); };
 WL.load().then(drawStar);
+// ---- 找相似走勢：拿這檔近 N 天收盤的「形狀」跟全部台股比 ----
+let CLOSES = null;
+const zn = a => { const m = a.reduce((s, x) => s + x, 0) / a.length, sd = Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1; return a.map(x => (x - m) / sd); };
+const spark = a => { const mx = Math.max(...a), mn = Math.min(...a), W = 90, H = 30; return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><polyline fill="none" stroke="${a.at(-1) >= a[0] ? '#ff5a5a' : '#2ecc71'}" stroke-width="1.6" points="${a.map((v, i) => `${(i / (a.length - 1) * W).toFixed(1)},${(H - 2 - (v - mn) / (mx - mn || 1) * (H - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
+async function similar(N) {
+  if (!CLOSES) CLOSES = await (await fetch('pm/closes.json?t=' + Date.now())).json();
+  const me = cur.bars.slice(-N).map(b => b[4]); if (me.length < N) return [];
+  const t = zn(me), info = new Map(LIST.map(x => [x[0], x])), out = [];
+  for (const [code, v] of Object.entries(CLOSES.s)) {
+    if (code === cur.id || v[0] < 0.05) continue;
+    const c = v.slice(2).slice(-N); if (c.length < N) continue;
+    const z = zn(c), r = z.reduce((s, x, i) => s + x * t[i], 0) / N;
+    if (r >= 0.75) out.push({ code, r, c, amt: v[0], d: v[1], name: info.get(code)?.[1] || code, ind: info.get(code)?.[3] || '' });
+  }
+  return out.sort((a, b) => b.r - a.r).slice(0, 30);
+}
+function simModal(N = 24) {
+  WL.modal(`<h3>🔍 跟「${WL.esc(cur.name)}」近期走勢相似的股票</h3>
+    <div class="row" id="simN">${[[20, '近 20 天'], [24, '近 24 天'], [40, '近 40 天'], [60, '近 60 天']].map(([n, t]) => `<button data-n="${n}"${n === N ? ' class="pri"' : ''}>${t}</button>`).join('')}</div>
+    <p style="font-size:12px;color:#93a3bf;margin:8px 0 4px">比的是收盤價的「形狀」，股價高低不影響；相似度 1.00＝一模一樣。已排除每天成交不到 500 萬的冷門股。</p>
+    <div id="simL" style="font-size:14px">比對中…</div>
+    <div class="foot"><button id="simX">關閉</button><button class="pri" id="simS" disabled>存成自選分類</button></div>`, async (m, close) => {
+    m.querySelector('#simX').onclick = close;
+    m.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { close(); simModal(+b.dataset.n); });
+    let R = [];
+    try { R = await similar(N); } catch { m.querySelector('#simL').textContent = '讀取資料失敗，稍後再試'; return; }
+    m.querySelector('#simL').innerHTML = R.length ? `<div style="color:#93a3bf;font-size:12px;margin-bottom:4px">${CLOSES.asOf.slice(5).replace('-', '/')} 收盤資料｜共 ${R.length} 檔（相似度 0.75 以上，最多 30 檔）</div>` + R.map(x => `<a href="chart.html?s=${x.code}" data-go="${x.code}" style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #22314f;color:#e8eef8;text-decoration:none">
+      <span style="flex:1;min-width:0"><b>${WL.esc(x.name)}</b> <span style="color:#93a3bf;font-size:12px">${x.code} ${WL.esc(x.ind)}</span></span>${spark(x.c)}<b style="width:42px;text-align:right;color:#F0E442">${x.r.toFixed(2)}</b></a>`).join('') : '找不到相似度 0.75 以上的股票，試試別的天數';
+    m.querySelectorAll('[data-go]').forEach(a => a.onclick = e => { e.preventDefault(); close(); show(a.dataset.go); });
+    const sb = m.querySelector('#simS'); sb.disabled = !R.length;
+    sb.onclick = () => {
+      const D = WL.data, nm = `相似 ${cur.name.split(' ')[0]} ${new Date(Date.now() + 8 * 3600e3).toISOString().slice(5, 10).replace('-', '/')}`;
+      const g = WL.addGroup(D.cats[0].id, nm); g.codes = R.slice(0, 20).map(x => x.code); WL.save();
+      sb.textContent = `已存到「${D.cats[0].name}／${nm}」`; sb.disabled = true;
+    };
+  });
+}
+$('#simBtn').onclick = () => cur && simModal();
 const liveTick = async () => {
   if (!cur || !RT.stockLive()) { $('#live').textContent = ''; return; }
   const top = (DATA?.items || []).filter(x => x.group === 'top5' || x.group === 'watch').map(x => x.id);

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['pm/stocks.mjs', '.github/workflows/stocks.yml']
+    paths: ['pm/stocks.mjs', 'pm/similar.mjs', 'pm/patterns.json', '.github/workflows/stocks.yml']
 
 permissions:
   contents: write
@@ -27,11 +27,13 @@ jobs:
           node-version: 20
       - name: 更新個股K線
         run: node pm/stocks.mjs
+      - name: 掃描相似走勢
+        run: node pm/similar.mjs
       - name: 存檔
         run: |
           git config user.name "stock-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add k pm/sector.json
+          git add k pm/sector.json pm/similar.json pm/closes.json
           git diff --cached --quiet && exit 0
           git commit -qm "個股K線 $(TZ=Asia/Taipei date '+%F %H:%M')"
           for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep 8; done

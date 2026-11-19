@@ -45,6 +45,8 @@ main{max-width:760px;margin:0 auto;padding:10px}
 .card svg{width:100%;height:auto;display:block;margin-top:4px}
 .live{font-size:11px;color:var(--up)}
 .empty{text-align:center;color:var(--mut);padding:40px 10px;line-height:1.9}
+.sysnote{background:#17243d;border:1px solid #2b5a8a;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:10px}
+.card .why{font-size:13px;color:#c9d5ea;background:#0f1a2e;border-radius:8px;padding:5px 8px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -70,7 +72,10 @@ const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
 const esc = WL.esc;
 const MAS = [{ k: 5, c: '#F0E442', w: 1.6 }, { k: 20, c: '#3DA5FF', w: 2 }];
-let LIST = [], INFO = new Map(), K = {}, RTQ = {};
+let LIST = [], INFO = new Map(), K = {}, RTQ = {}, SIM = null;
+const isSys = () => cat === 'sys';
+const simPat = () => SIM?.patterns.find(p => 'sys:' + p.id === grp);
+const curCodes = () => isSys() ? (simPat()?.items || []).map(x => x.code) : (WL.findG(grp)?.codes || []);
 let cat = null, grp = null, sortK = 'none', sortDir = -1;
 try { const s = JSON.parse(localStorage.getItem('wl-view') || '{}'); cat = s.cat; grp = s.grp; } catch {}
 const saveView = () => { try { localStorage.setItem('wl-view', JSON.stringify({ cat, grp })); } catch {} };
@@ -117,27 +122,38 @@ function stat(code) {
 
 // ---- 畫面 ----
 function drawTabs() {
-  const D = WL.data;
+  const D = WL.data, sysBtn = SIM?.patterns?.length ? `<button data-c="sys" class="${isSys() ? 'on' : ''}">🔍 系統選股</button>` : '';
+  if (isSys() && !SIM?.patterns?.length) return;
+  document.querySelector('.bar .srch').parentElement.style.display = isSys() ? 'none' : '';
+  if (isSys()) {
+    if (!simPat()) grp = 'sys:' + SIM.patterns[0].id;
+    $('#cats').innerHTML = sysBtn + D.cats.map(c => `<button data-c="${c.id}">📁 ${esc(c.name)}</button>`).join('') + `<button class="add" data-addcat>＋ 大分類</button>`;
+    $('#grps').innerHTML = SIM.patterns.map(p => `<button data-g="sys:${p.id}" class="${'sys:' + p.id === grp ? 'on' : ''}">${esc(p.name)} <span class="mut" style="font-size:12px">${p.items.length}</span></button>`).join('');
+    saveView(); return;
+  }
   if (!D.cats.find(c => c.id === cat)) cat = D.cats[0].id;
   const C = D.cats.find(c => c.id === cat);
   if (!C.groups.find(g => g.id === grp)) grp = C.groups[0]?.id;
-  $('#cats').innerHTML = D.cats.map(c => `<button data-c="${c.id}" class="${c.id === cat ? 'on' : ''}">📁 ${esc(c.name)}</button>`).join('') + `<button class="add" data-addcat>＋ 大分類</button>`;
+  $('#cats').innerHTML = sysBtn + D.cats.map(c => `<button data-c="${c.id}" class="${c.id === cat ? 'on' : ''}">📁 ${esc(c.name)}</button>`).join('') + `<button class="add" data-addcat>＋ 大分類</button>`;
   $('#grps').innerHTML = C.groups.map(g => `<button data-g="${g.id}" class="${g.id === grp ? 'on' : ''}">${esc(g.name)} <span class="mut" style="font-size:12px">${g.codes.length}</span></button>`).join('') + `<button class="add" data-addgrp>＋ 分類</button>`;
   saveView();
 }
 async function drawList() {
-  const g = WL.findG(grp);
+  const P = isSys() ? simPat() : null, g = P ? { codes: P.items.map(x => x.code) } : WL.findG(grp);
+  const why = P ? new Map(P.items.map(x => [x.code, x])) : null;
+  const head = P ? `<div class="sysnote"><b>${esc(P.name)}</b>：${esc(P.desc)}<br><span class="mut">樣板：${esc(P.from)}｜${md(SIM.asOf)} 收盤後掃描全部台股｜依相似度排序</span></div>` : '';
   if (!g) { $('#list').innerHTML = ''; return; }
-  if (!g.codes.length) { $('#list').innerHTML = `<div class="empty">這個分類還沒有股票<br>在上面的搜尋框輸入代號或名稱加入<br>或在 K線圖頁按「☆ 加入自選」</div>`; return; }
+  if (!g.codes.length) { $('#list').innerHTML = head + (P ? `<div class="empty">今天沒有符合這個走勢的股票</div>` : `<div class="empty">這個分類還沒有股票<br>在上面的搜尋框輸入代號或名稱加入<br>或在 K線圖頁按「☆ 加入自選」</div>`); return; }
   await Promise.all(g.codes.map(getK));
   let codes = g.codes.slice();
   if (sortK !== 'none') codes.sort((a, b) => ((stat(b)[sortK] ?? -1e9) - (stat(a)[sortK] ?? -1e9)) * (sortDir === -1 ? 1 : -1));
-  $('#list').innerHTML = codes.map(code => {
+  $('#list').innerHTML = head + codes.map(code => {
     const o = K[code], inf = INFO.get(code), s = stat(code), b = barsOf(code);
     if (!o) return `<div class="card"><div class="hd"><span class="nm">${code}</span><button class="more" data-m="${code}">⋯</button></div><p class="mut">找不到K線資料</p></div>`;
     return `<div class="card" id="c-${code}"><div class="hd"><div><a class="nm" href="chart.html?s=${code}">${esc(o.n)}<small>${code}</small></a>${inf?.[3] ? `<span class="ind">${esc(inf[3])}</span>` : ''}
       <div class="px ${cls(s.ch)}">${fmt(s.c, s.c >= 100 ? 1 : 2)}<small>${sg(s.ch, 2)}（${fmt(Math.abs(s.p), 2)}%）</small></div>
-      <div class="meta"><span>量 ${fmt(s.v)} 張</span><span>${o.m || ''}</span><span>${s.live ? '<span class="live">● 即時</span>' : md(s.d) + ' 收盤'}</span></div></div>
+      <div class="meta"><span>量 ${fmt(s.v)} 張</span><span>${o.m || ''}</span><span>${s.live ? '<span class="live">● 即時</span>' : md(s.d) + ' 收盤'}</span></div>
+      ${why?.get(code) ? (w => `<div class="why">前段 <b class="up">+${w.rise}%</b>｜回檔 <b class="dn">${w.back}%</b>（${w.days} 天）｜相似度 <b>${w.sim.toFixed(2)}</b>${w.volDry ? '｜回檔量縮' : ''}</div>`)(why.get(code)) : ''}</div>
       <button class="more" data-m="${code}" aria-label="分類設定">⋯</button></div>
       <a href="chart.html?s=${code}">${minik(b)}</a></div>`;
   }).join('');
@@ -164,6 +180,7 @@ $('#sort').onclick = e => {
 $('#list').onclick = e => {
   const b = e.target.closest('[data-m]'); if (!b) return;
   const code = b.dataset.m, n = K[code]?.n || code;
+  if (isSys()) return WL.pick(code, n, () => {});
   WL.modal(`<h3>${esc(n)} ${code}</h3>
     <div class="row"><button class="pri" id="mv" style="flex:1">加入／移到其他分類…</button></div>
     <div class="row"><button class="del" id="rm" style="flex:1;border:1px solid #5a2b2b">從「${esc(WL.findG(grp)?.name)}」移除</button></div>
@@ -228,9 +245,9 @@ WL.on((d, s) => { $('#sync').textContent = `☁️ ${s}`; });
 // ---- 盤中即時 ----
 async function liveTick() {
   if (!RT.on || !RT.stockLive()) { $('#live').textContent = ''; return; }
-  const g = WL.findG(grp); if (!g?.codes.length) return;
+  const cc = curCodes(); if (!cc.length) return;
   try {
-    const Q = await RT.q(g.codes.map(c => `${K[c]?.m === '上櫃' || INFO.get(c)?.[2] === '上櫃' ? 'otc' : 'tse'}_${c}.tw`));
+    const Q = await RT.q(cc.map(c => `${K[c]?.m === '上櫃' || INFO.get(c)?.[2] === '上櫃' ? 'otc' : 'tse'}_${c}.tw`));
     Object.assign(RTQ, Q);
     const t = Object.values(Q)[0]?.t;
     $('#live').innerHTML = t ? `<span style="color:#ff5a5a">●</span> 盤中即時 ${RT.hhmmss(t)}` : '';
@@ -240,6 +257,9 @@ async function liveTick() {
 (async () => {
   drawTabs();
   try { LIST = await (await fetch('k/list.json')).json(); INFO = new Map(LIST.map(x => [x[0], x])); } catch {}
+  try { SIM = await (await fetch('pm/similar.json?t=' + Date.now())).json(); } catch {}
+  if (new URLSearchParams(location.search).get('v') === 'sys') cat = 'sys';
+  if (isSys() && !SIM?.patterns?.length) cat = null;
   await WL.load(); redraw(); liveTick();
   setInterval(liveTick, RT.every);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { WL.load().then(redraw); liveTick(); } });
