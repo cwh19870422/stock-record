@@ -47,7 +47,10 @@ details.box>summary{cursor:pointer;color:var(--mut);font-size:13px;padding:2px 6
 details.box>summary::-webkit-details-marker{display:none}
 details.box>summary::before{content:'▶ ';font-size:10px}
 details.box[open]>summary::before{content:'▼ '}
-.wvb{pointer-events:auto;margin-left:6px;background:#17243d;color:#93a3bf;border:1px solid #26375a;border-radius:99px;padding:1px 10px;font-size:12px;cursor:pointer;font-style:normal}
+.wvb{background:#17243d;color:#93a3bf;border:1px solid #26375a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#wvOv{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:3;overflow:hidden}
+#wvOv b{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px #0008}
+#wvOv b.h{background:#e53935} #wvOv b.l{background:#22a052}
 .wvb.on{background:#F0E442;color:#1a1a1a;border-color:#F0E442;font-weight:700}
 </style>
 </head>
@@ -58,9 +61,9 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="simBtn" style="margin-left:auto;background:#17243d;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="wvBtn" class="wvb" style="margin-left:auto">頭、底</button><button id="simBtn" style="background:#17243d;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i><button id="wvBtn" class="wvb">頭／底</button></div><div id="main"></div></div>
+  <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div><div id="wvOv"></div></div>
   <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
   <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ DIF</i><i style="color:#5aa9ff">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
   <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
@@ -150,13 +153,22 @@ function waves(B) {
   }
   return out;
 }
+let WVB = null;
 function drawWaves(B) {
-  const b = document.getElementById('wvBtn'); if (b) b.classList.toggle('on', WV);
-  if (!WV || !B) { S.candle.setMarkers([]); return; }
-  const f = v => v >= 1000 ? Math.round(v) : +v.toFixed(2);
-  S.candle.setMarkers(waves(B).map(w => w.t === 'H'
-    ? { time: B[w.i][0], position: 'aboveBar', color: '#ff8a8a', shape: 'arrowDown', text: `頭 ${f(w.v)}` }
-    : { time: B[w.i][0], position: 'belowBar', color: '#5aa9ff', shape: 'arrowUp', text: `底 ${f(w.v)}` }));
+  if (B) WVB = B;
+  const btn = document.getElementById('wvBtn'); if (btn) btn.classList.toggle('on', WV);
+  requestAnimationFrame(placeWaves);
+}
+function placeWaves() {
+  const ov = document.getElementById('wvOv'), el = document.getElementById('main'); if (!ov) return;
+  if (!WV || !WVB) { ov.innerHTML = ''; return; }
+  const ox = el.offsetLeft, oy = el.offsetTop, W = el.clientWidth - 60, H = el.clientHeight;
+  ov.innerHTML = waves(WVB).map(w => {
+    const x = cMain.timeScale().timeToCoordinate(WVB[w.i][0]), p = S.candle.priceToCoordinate(w.v);
+    if (x == null || p == null || x < 0 || x > W) return '';
+    const y = w.t === 'H' ? p - 14 : p + 14; if (y < 8 || y > H - 8) return '';
+    return `<b class="${w.t === 'H' ? 'h' : 'l'}" style="left:${ox + x}px;top:${oy + y}px">${w.t === 'H' ? '頭' : '底'}</b>`;
+  }).join('');
 }
 const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
 
@@ -275,7 +287,9 @@ function drawStar() {
 }
 $('#star').onclick = () => { const c = starCode(); if (c) WL.pick(c, cur.name, drawStar); };
 WL.load().then(drawStar);
-document.getElementById('wvBtn').onclick = () => { WV = !WV; try { localStorage.setItem('k-waves', WV ? '1' : '0'); } catch {} drawWaves(cur?.bars); };
+document.getElementById('wvBtn').addEventListener('click', e => { e.preventDefault(); WV = !WV; try { localStorage.setItem('k-waves', WV ? '1' : '0'); } catch {} drawWaves(cur?.bars); });
+cMain.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(placeWaves));
+new ResizeObserver(() => requestAnimationFrame(placeWaves)).observe(document.getElementById('main'));
 // ---- 找相似走勢：拿這檔近 N 天收盤的「形狀」跟全部台股比 ----
 let CLOSES = null;
 const zn = a => { const m = a.reduce((s, x) => s + x, 0) / a.length, sd = Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1; return a.map(x => (x - m) / sd); };
