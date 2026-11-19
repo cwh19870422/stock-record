@@ -422,7 +422,7 @@ function sectorInit(SC) {
       $('#tmBack').onclick = () => { sel = null; draw(); };
       $('#tm').innerHTML = rects.map(r => box(r, r.name, pc(r.pct), `${fmt(r.val, 1)}億`, mx, 'a', `href="chart.html?s=${r.c}"`)).join('');
       $('#tm').onclick = null;
-      $('#tmlist').innerHTML = `<p class="note">成交值前 ${st.length} 檔｜點方塊或名稱看 K 線</p>` + st.map(t => `<a href="chart.html?s=${t.c}"><span>${t.name} <span class="mut" style="font-size:12px">${t.c}</span></span><span>${fmt(t.val, 1)}億　<span class="${cls(t.pct)}">${sg(t.pct, 2)}%</span></span></a>`).join('');
+      $('#tmlist').innerHTML = '';
       return;
     }
     const tot = arr.reduce((s, x) => s + x.val, 0) || 1, mx = { d: 3, w: 6, m: 10, q: 15, y: 30 }[per];
