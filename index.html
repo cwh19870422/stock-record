@@ -541,7 +541,7 @@ function go(p,url){
   window.scrollTo(0,0);
 }
 // 內嵌頁高度＝畫面扣掉上方標題列與下方選單
-function fitFrames(){const side=matchMedia('(min-width:900px)').matches,h=innerHeight-document.querySelector('header').offsetHeight-(side?0:document.querySelector('nav').offsetHeight);document.querySelectorAll('.embedpg iframe').forEach(f=>f.style.height=h+'px')}
+function fitFrames(){const h=innerHeight-document.querySelector('header').offsetHeight-document.querySelector('nav').offsetHeight;document.querySelectorAll('.embedpg iframe').forEach(f=>f.style.height=h+'px')}
 addEventListener('resize',fitFrames);
 // 內嵌頁之間互相跳轉（例如盤前看板點「K線」→ 切到 K線 分頁）
 addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.appGo)return;go(e.data.appGo,e.data.url)});
