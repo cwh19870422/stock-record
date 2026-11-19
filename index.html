@@ -442,8 +442,8 @@ function start(u){
   uid=u.uid; $('acct').textContent='登入帳號：'+u.email;
   unsub.forEach(f=>f()); unsub=[];
   const st=s=>{$('syncState').textContent=s.metadata.hasPendingWrites?'同步中…':(s.metadata.fromCache?'離線':'已同步')};
-  unsub.push(U().collection('buys').onSnapshot(s=>{DB.buys=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
-  unsub.push(U().collection('sells').onSnapshot(s=>{DB.sells=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
+  unsub.push(U().collection('buys').onSnapshot({includeMetadataChanges:true},s=>{DB.buys=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
+  unsub.push(U().collection('sells').onSnapshot({includeMetadataChanges:true},s=>{DB.sells=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
   unsub.push(U().collection('notes').onSnapshot(s=>{NOTES=s.docs.map(d=>({...d.data(),id:d.id}));refresh()}));
   unsub.push(U().onSnapshot(d=>{const nf=d.data()&&d.data().noteFolders;FOLDERS=nf||JSON.parse(JSON.stringify(DEF_FOLDERS));const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
   unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
