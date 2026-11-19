@@ -415,7 +415,7 @@ function sectorInit(SC) {
     const g = sel && arr.find(x => x.name === sel);
     if (!g) sel = null;
     if (g) { // 第二層：該產業個股
-      const st = g.top.filter(t => t[2] > 0).map(t => ({ c: t[0], name: t[1], val: t[2], pct: per === 'd' && LQ[t[0]]?.p != null ? Math.round(LQ[t[0]].p * 100) / 100 : t[3] }));
+      const st = g.top.filter(t => t[2] > 0).map(t => ({ c: t[0], name: t[1], val: t[2], pct: per === 'd' && Object.keys(LQ).length ? (LQ[t[0]]?.p != null ? Math.round(LQ[t[0]].p * 100) / 100 : 0) : t[3] }));
       const tot = st.reduce((s, x) => s + x.val, 0) || 1;
       const rects = squarify(st.map(x => ({ ...x, a: x.val / tot * W * H })), 0, 0, W, H), mx = { d: 6, w: 12, m: 20, q: 30, y: 60 }[per];
       $('#tmhead').innerHTML = `<button id="tmBack">‹ ${g.name}</button><span>${g.n} 檔｜${fmt(g.val)} 億｜<span class="${cls(g.pct)}">${sg(g.pct, 2)}%</span>${per === 'd' && Object.keys(LQ).length ? '｜<span style="color:#ff5a5a">●</span>即時' : ''}</span>`;

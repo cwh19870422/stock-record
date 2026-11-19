@@ -19,7 +19,7 @@ window.RT = (() => {
       const j = await r.json();
       (j.msgArray || []).forEach(x => {
         if (!x.c) return;
-        const y = n(x.y), z = n(x.z) ?? n(String(x.b || '').split('_')[0]) ?? null;
+        const y = n(x.y), z = n(x.z) ?? n(String(x.b || '').split('_')[0]) ?? n(String(x.a || '').split('_')[0]) ?? null; // 跌停沒買單時用委賣價
         out[x.c] = { c: x.c, name: x.n, z, y, o: n(x.o), h: n(x.h), l: n(x.l), v: n(x.v), t: x.t, d: x.d ? `${x.d.slice(0, 4)}-${x.d.slice(4, 6)}-${x.d.slice(6, 8)}` : null,
           ch: z != null && y ? z - y : null, p: z != null && y ? (z / y - 1) * 100 : null };
       });
