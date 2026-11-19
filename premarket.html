@@ -434,7 +434,7 @@ function sectorInit(SC) {
   };
   // 盤中點進產業：個股漲跌改用即時
   const live = async () => {
-    if (!sel || per !== 'd' || document.documentElement.classList.contains('share') || !window.RT?.on || !RT.stockLive()) return;
+    if (!sel || per !== 'd' || !window.RT?.on || !RT.stockLive()) return;
     const g = (SC.markets[mk]?.d || []).find(x => x.name === sel); if (!g) return;
     try { const pre = mk === '上市' ? 'tse_' : 'otc_'; LQ = await RT.q(g.top.map(t => `${pre}${t[0]}.tw`)); lqAt = Date.now(); if (sel === g.name) draw(); } catch {}
   };
@@ -550,15 +550,14 @@ function setTile(id, v, ch, unitPct, label) {
 }
 function liveInit(J) {
   if (!RT.on) return;
-  const SHARE = document.documentElement.classList.contains('share');
-  const top = SHARE ? [] : (J.top5?.list || []).map(s => s.code);
+  const top = (J.top5?.list || []).map(s => s.code);
   const tick = async () => {
     const st = RT.stockLive(), fs = RT.futSession();
     if (!st && fs == null) { $('#live').textContent = ''; return; }
     try {
       let t = '';
       if (st) {
-        const codes = SHARE ? ['tse_t00.tw'] : ['tse_t00.tw', 'otc_o00.tw', ...top.map(c => `tse_${c}.tw`), ...Object.keys(IDXN).flatMap(k => [`tse_t${k}.tw`, `otc_o${k}.tw`])];
+        const codes = ['tse_t00.tw', 'otc_o00.tw', ...top.map(c => `tse_${c}.tw`), ...Object.keys(IDXN).flatMap(k => [`tse_t${k}.tw`, `otc_o${k}.tw`])];
         const Q = await RT.q(codes);
         const ix = Q.t00;
         if (ix?.z) { setTile('idx', ix.z, ix.ch); t = ix.t; liveIdx(ix); }
@@ -569,9 +568,9 @@ function liveInit(J) {
           const code = Object.keys(IDXN).find(k => IDXN[k] === g.name), x = code && Q[pre + code];
           if (x?.p != null) { g.pct = Math.round(x.p * 100) / 100; g.live = true; }
         });
-        if (!SHARE) sectorRedraw();
+        sectorRedraw();
       }
-      if (fs != null && !SHARE) {
+      if (fs != null) {
         const f = await RT.fut(fs);
         if (f?.z) { setTile('night', f.z, f.ch, false, `${fs ? '台指期夜盤' : '台指期日盤'} <small>即時</small>`); t = t || RT.hhmmss(f.t); }
       }
