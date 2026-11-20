@@ -326,9 +326,10 @@ async function main() {
   const agree = chip3.every(c => c === 'up') ? '<b>籌碼三項都偏多</b>，訊號較可靠' :
     chip3.every(c => c === 'dn') ? '<b>籌碼三項都偏空</b>，訊號較可靠' : '<b>籌碼三項方向不一致</b>，宜保守、多留現金';
 
+  const pctOf = (c, ch) => c && ch != null && c - ch ? `（${fmt(Math.abs(ch / (c - ch) * 100), 2)}%）` : '';
   const tiles = [
-    ['idx', '加權指數', fmt(ix.c), `<span class="${cls(ix.ch)}">${sg(ix.ch)}</span>`, sig.idx],
-    ['night', `台指期夜盤 <small>${nL ? md(nL.d) + '盤前' : ''}</small>`, nL ? fmt(nL.c) : '—', nL ? `<span class="${cls(nL.ch)}">${sg(nL.ch)}</span>` : '', sig.night],
+    ['idx', '加權指數', fmt(ix.c), `<span class="${cls(ix.ch)}">${sg(ix.ch)}${pctOf(ix.c, ix.ch)}</span>`, sig.idx],
+    ['night', `台指期夜盤 <small>${nL ? md(nL.d) + '盤前' : ''}</small>`, nL ? fmt(nL.c) : '—', nL ? `<span class="${cls(nL.ch)}">${sg(nL.ch)}${pctOf(nL.c, nL.ch)}</span>` : '', sig.night],
     ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
     ['fut', '外資期貨' + (tL.net != null ? futSide(tL.net) : '淨部位'), futSize(tL.net), `<span class="${cls(tL.chg)}">${futChg(tL.net, tL.chg, true)}</span>`, sig.fut],
@@ -610,7 +611,8 @@ const IDXN = { '01': '水泥工業', '02': '食品工業', '03': '塑膠工業',
 function setTile(id, v, ch, unitPct, label) {
   const t = $('#t-' + id); if (!t || v == null) return;
   t.querySelector('.v').textContent = fmt(v, id === 'sox' ? 0 : 0);
-  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${pm(unitPct ? sg(ch, 2) + '%' : sg(ch))}</span>`;
+  const pc = !unitPct && ch != null && v - ch ? `（${fmt(Math.abs(ch / (v - ch) * 100), 2)}%）` : '';
+  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${pm(unitPct ? sg(ch, 2) + '%' : sg(ch) + pc)}</span>`;
   if (label) t.querySelector('.k').innerHTML = label;
 }
 function liveInit(J) {
