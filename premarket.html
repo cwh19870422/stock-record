@@ -129,6 +129,8 @@ const fmt = (v, d = 0) => v == null || isNaN(v) ? '—' : Number(v).toLocaleStri
 const sg = (v, d = 0) => v == null ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : '') + fmt(Math.abs(v), d);
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
+// 小卡用 +／- 符號（不用箭頭）
+const pm = x => String(x).replace(/▲/g, '+').replace(/▼/g, '-');
 const tag = (t, c) => `<span class="tag ${c}"><i>${t}</i></span>`;
 // 外資期貨：把正負號換成白話（空單／多單、比前一天多／少幾口）
 const futSide = net => net < 0 ? '空單' : '多單';
@@ -321,7 +323,7 @@ async function main() {
     ['fut', '外資期貨' + (tL.net != null ? futSide(tL.net) : '淨部位'), futSize(tL.net), `<span class="${cls(tL.chg)}">${futChg(tL.net, tL.chg, true)}</span>`, sig.fut],
     ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `${mL.ratio != null ? `維持率 ${mL.ratio.toFixed(0)}% {TAG}<br>` : ''}融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
   ];
-  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s.includes('{TAG}') ? s.replace('{TAG}', tag(g[0], g[1])) : s + ' ' + tag(g[0], g[1])}</div></a>`).join('')}</div>`;
+  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${pm(v)}</div><div class="s">${(s = pm(s)).includes('{TAG}') ? s.replace('{TAG}', tag(g[0], g[1])) : s + ' ' + tag(g[0], g[1])}</div></a>`).join('')}</div>`;
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
 
   // 1. 指數（含均線扣抵）
@@ -598,7 +600,7 @@ function setTile(id, v, ch, unitPct, label) {
   const t = $('#t-' + id); if (!t || v == null) return;
   t.querySelector('.v').textContent = fmt(v, id === 'sox' ? 0 : 0);
   const tg = t.querySelector('.s .tag'), up = ch > 0;
-  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${unitPct ? sg(ch, 2) + '%' : sg(ch)}</span> ${tg ? tg.outerHTML : ''}`;
+  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${pm(unitPct ? sg(ch, 2) + '%' : sg(ch))}</span> ${tg ? tg.outerHTML : ''}`;
   if (label) t.querySelector('.k').innerHTML = label;
 }
 function liveInit(J) {
