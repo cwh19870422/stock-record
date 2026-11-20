@@ -69,6 +69,7 @@ details.sec>summary .arw{color:var(--mut);font-size:13px;flex:none;transition:tr
 details.sec[open]>summary .arw{transform:rotate(90deg)}
 details.sec>summary .big{font-size:20px}
 details.sec[open]>summary .big{font-size:26px}
+.hint{font-size:12px;font-weight:600;color:#F0E442;background:rgba(240,228,66,.12);border-radius:6px;padding:1px 8px}
 .kl{font-size:12px;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:99px;padding:1px 8px;text-decoration:none}
 .tools{display:flex;gap:8px;margin-bottom:10px}
 .tools button,.tools a{flex:1;text-align:center;background:var(--card);color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:7px;font-size:13px;cursor:pointer;text-decoration:none}
@@ -125,6 +126,17 @@ const sg = (v, d = 0) => v == null ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : ''
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
 const tag = (t, c) => `<span class="tag ${c}">${t}</span>`;
+// 外資期貨：把正負號換成白話（空單／多單、比前一天多／少幾口）
+const futSide = net => net < 0 ? '空單' : '多單';
+const futSize = net => net == null ? '—' : (Math.abs(net) / 1e4).toFixed(2) + ' 萬口';
+function futChg(net, chg, short) {
+  if (chg == null || net == null) return '—';
+  if (!chg) return '和前一天一樣';
+  const n = fmt(Math.abs(chg)), side = futSide(net), good = chg > 0; // chg>0：往多方移動（空單減少或多單增加）
+  const more = net < 0 ? !good : good; // 這一邊的口數是變多還是變少
+  const mean = good ? (net < 0 ? '壓力減輕' : '偏多加強') : (net < 0 ? '壓力增加' : '偏多減弱');
+  return short ? `${more ? '多' : '少'} ${n} 口` : `${side}比前一天${more ? '多' : '少'} ${n} 口（${mean}）`;
+}
 // 大盤融資維持率分區（一般市場參考，不是絕對標準）
 const MZ = [
   { lo: 170, hi: 200, name: '偏熱', c: '#5aa9ff', d: '散戶融資意願強、槓桿水位高，追高風險上升' },
@@ -290,7 +302,7 @@ async function main() {
     night: nL ? (nL.ch > 0 ? ['開高', 'up'] : nL.ch < 0 ? ['開低', 'dn'] : ['平盤', 'mid']) : ['—', 'mid'],
     sox: sL ? (sL.p > 0 ? ['偏多', 'up'] : ['偏空', 'dn']) : ['—', 'mid'],
     inst: fL.tot > 0 ? ['買超', 'up'] : ['賣超', 'dn'],
-    fut: tL.chg > 0 ? ['空單減', 'up'] : tL.chg < 0 ? ['空單增', 'dn'] : ['持平', 'mid'],
+    fut: tL.chg > 0 ? [tL.net < 0 ? '壓力減輕' : '偏多加強', 'up'] : tL.chg < 0 ? [tL.net < 0 ? '壓力增加' : '偏多減弱', 'dn'] : ['持平', 'mid'],
     mar: mL.finChg < 0 ? ['籌碼乾淨', 'up'] : ['散戶追價', 'dn'],
   };
   const chip3 = [sig.inst[1], sig.fut[1], sig.mar[1]];
@@ -302,7 +314,7 @@ async function main() {
     ['night', `台指期夜盤 <small>${nL ? md(nL.d) + '盤前' : ''}</small>`, nL ? fmt(nL.c) : '—', nL ? `<span class="${cls(nL.ch)}">${sg(nL.ch)}</span>` : '', sig.night],
     ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
-    ['fut', '外資期貨淨未平倉', fmt(tL.net), `<span class="${cls(tL.chg)}">${sg(tL.chg)}口</span>`, sig.fut],
+    ['fut', '外資期貨' + (tL.net != null ? futSide(tL.net) : '淨部位'), futSize(tL.net), `<span class="${cls(tL.chg)}">${futChg(tL.net, tL.chg, true)}</span>`, sig.fut],
     ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `${mL.ratio != null ? `維持率 ${mL.ratio.toFixed(0)}% {TAG}<br>` : ''}融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
   ];
   let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s.includes('{TAG}') ? s.replace('{TAG}', tag(g[0], g[1])) : s + ' ' + tag(g[0], g[1])}</div></a>`).join('')}</div>`;
@@ -346,12 +358,14 @@ async function main() {
     <div class="how"><b>怎麼看：</b>外資由賣轉買是好訊號；大跌日法人仍合計買超＝底層籌碼不壞；投信連續大買＝下檔有支撐。單日雜訊大，要看連續幾天的方向。</div></section>`;
 
   // 5. 期貨
-  h += `<section id="fut"><h2>⑤ 外資台指期淨未平倉 ${tag(sig.fut[0], sig.fut[1])}</h2>
-    <div class="big ${cls(tL.net)}">${fmt(tL.net)} 口<small class="${cls(tL.chg)}">${sg(tL.chg)}</small></div>
-    <p class="note">負數＝淨空單；「增減」為正代表空單減少</p>
-    ${level(days, T.map(x => x.net ?? null), T.map(x => x.chg ?? null), v => (v / 1e4).toFixed(2) + '萬', v => sg(v / 1e3, 1) + 'k', { ref: -100000, refLabel: '-10萬口', title: '淨未平倉（口）', chgTitle: '增減' })}
-    ${table(['日期', '淨未平倉', '增減'], days.map((d, i) => [md(d), fmt(T[i].net), `<span class="${cls(T[i].chg)}">${sg(T[i].chg)}</span>`]))}
-    <div class="how"><b>怎麼看：</b>空單大減、跌破 10 萬口＝壓力退潮；10 萬口以上＝高檔仍有壓盤工具。現貨買、期貨空單卻增加＝訊號矛盾。結算日前後數字容易失真。</div></section>`;
+  const fShort = tL.net == null || tL.net < 0;
+  h += `<section id="fut"><h2>⑤ 外資台指期${fShort ? '空單' : '多單'} ${tag(sig.fut[0], sig.fut[1])} <span class="hint">偏短線、看態度</span></h2>
+    <div class="big">外資手上${fShort ? '空單' : '多單'} ${futSize(tL.net)}</div>
+    <div style="font-size:15px;margin-top:4px" class="${cls(tL.chg)}">${futChg(tL.net, tL.chg)}</div>
+    <p class="note">空單像壓在台股上的沙包：沙包變多＝壓力增加（綠），沙包變少＝壓力減輕（紅）</p>
+    ${level(days, T.map(x => x.net == null ? null : Math.abs(x.net)), T.map(x => x.chg ?? null), v => (v / 1e4).toFixed(2) + '萬', c => (fShort ? (c > 0 ? '少' : '多') : (c > 0 ? '多' : '少')) + (Math.abs(c) / 1e3).toFixed(1) + 'k', { ref: 100000, refLabel: '10萬口（歷史高檔）', title: `外資${fShort ? '空單' : '多單'}口數（越高${fShort ? '壓力越大' : '越偏多'}）`, chgTitle: '比前一天' })}
+    ${table(['日期', `外資${fShort ? '空單' : '多單'}`, '比前一天', '意思'], days.map((d, i) => { const n = T[i].net, c = T[i].chg; return [md(d), n == null ? '—' : fmt(Math.abs(n)) + ' 口', `<span class="${cls(c)}">${futChg(n, c, true)}</span>`, c == null || !c ? '—' : `<span class="${cls(c)}">${c > 0 ? (n < 0 ? '壓力減輕' : '偏多加強') : (n < 0 ? '壓力增加' : '偏多減弱')}</span>`]; }))}
+    <div class="how"><b>怎麼看：</b>重點看「比前一天多還是少」：一天少 5,000 口以上＝外資大回補，常帶動急漲；一天多 5,000 口以上＝外資加碼看空。10 萬口以上是歷史高檔區。現貨在買、期貨空單卻增加＝可能是避險或套利，訊號矛盾。結算日前後數字容易失真。</div></section>`;
 
   // 6. 融資融券
   h += `<section id="mar"><h2>⑥ 融資融券 ${tag(sig.mar[0], sig.mar[1])}</h2>
