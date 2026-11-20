@@ -14,12 +14,14 @@ header{position:sticky;top:0;z-index:5;background:rgba(15,26,46,.95);backdrop-fi
 h1{margin:0;font-size:20px}
 .sub{color:var(--mut);font-size:12px}
 main{max-width:760px;margin:0 auto;padding:12px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:8px;margin-bottom:12px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit;display:block}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:8px;margin-bottom:12px}
+.tile{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit;display:block}
 .tile .k{font-size:12px;color:var(--mut)}
 .tile .v{font-size:19px;font-weight:700;margin:2px 0}
-.tile .s{font-size:15px;line-height:1.75}
-.tile .s .tag{font-size:13px;vertical-align:1px;white-space:nowrap}
+.tile .s{font-size:17px;line-height:1.6;white-space:nowrap;overflow:hidden}
+.tag i{font-style:normal}
+.tile .s .tag{display:inline-flex;align-items:center;box-sizing:border-box;height:.86em;font-size:inherit;line-height:1;padding:0 .4em;vertical-align:.1em}
+.tile .s .tag i{font-size:.62em}
 .sum{background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px;margin-bottom:12px;font-size:14px}
 .sum b{color:var(--acc)}
 details.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;scroll-margin-top:70px}
@@ -126,7 +128,7 @@ const fmt = (v, d = 0) => v == null || isNaN(v) ? '—' : Number(v).toLocaleStri
 const sg = (v, d = 0) => v == null ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : '') + fmt(Math.abs(v), d);
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
-const tag = (t, c) => `<span class="tag ${c}">${t}</span>`;
+const tag = (t, c) => `<span class="tag ${c}"><i>${t}</i></span>`;
 // 外資期貨：把正負號換成白話（空單／多單、比前一天多／少幾口）
 const futSide = net => net < 0 ? '空單' : '多單';
 const futSize = net => net == null ? '—' : (Math.abs(net) / 1e4).toFixed(2) + ' 萬口';
@@ -634,6 +636,13 @@ function liveInit(J) {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 }
 main();
+// 小卡下方那排太長時自動縮小字級（最小 12px），避免換行
+function fitTiles(){document.querySelectorAll('.tile .s').forEach(el=>{
+  el.style.fontSize='';const w=el.clientWidth;if(!w)return;
+  const nat=()=>{el.style.width='max-content';const n=el.getBoundingClientRect().width;el.style.width='';return n};
+  let f=17;while(nat()>w-2&&f>12){f-=.5;el.style.fontSize=f+'px'}})}
+new MutationObserver(()=>requestAnimationFrame(fitTiles)).observe(document.body,{childList:true,subtree:true,characterData:true});
+addEventListener('resize',fitTiles);
 </script>
 </body>
 </html>
