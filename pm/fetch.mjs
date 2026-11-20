@@ -79,12 +79,13 @@ async function inst(days) {
   }
 }
 
-// ---------- 3. 融資融券 ----------
+// ---------- 3. 融資融券＋大盤融資維持率 ----------
+// 維持率＝Σ（各股融資餘額張數×1000×當日收盤價）÷ 融資餘額金額（上市）
 async function margin(days) {
   for (const d of days) {
-    if (D.margin[d]) continue;
-    const j = await twse(`https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=${compact(d)}&selectType=MS&response=json`);
-    const t = j.tables?.find(t => t.data?.some(r => String(r[0]).includes('融資金額'))) || (j.creditList ? { data: j.creditList } : null);
+    if (D.margin[d] && D.margin[d].ratio != null) continue;
+    const j = await twse(`https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=${compact(d)}&selectType=ALL&response=json`);
+    const t = j.tables?.find(t => t.data?.some(r => String(r[0]).includes('融資金額')));
     if (j.stat !== 'OK' || !t) { say(`融資券 ${d}：尚無資料`); continue; }
     const row = k => t.data.find(r => String(r[0]).includes(k));
     const amt = row('融資金額'), sh = row('融券');
@@ -93,7 +94,17 @@ async function margin(days) {
       fin: r2(bal(amt) / 1e5), finChg: r2((bal(amt) - prev(amt)) / 1e5),
       sht: bal(sh), shtChg: bal(sh) - prev(sh),
     };
-    say(`融資券 ${d}：融資 ${D.margin[d].finChg} 億、融券 ${D.margin[d].shtChg} 張`);
+    try {
+      const st = j.tables.find(x => x.fields?.[0] === '代號' && x.data?.length > 100);
+      const k = await twse(`https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=${compact(d)}&type=ALLBUT0999&response=json`);
+      const pt = k.tables?.find(x => x.fields?.includes('收盤價')), ci = pt?.fields.indexOf('收盤價');
+      if (st && pt) {
+        const px = {}; pt.data.forEach(r => { const v = num(r[ci]); if (v > 0) px[r[0]] = v; });
+        let mv = 0; st.data.forEach(r => { const n = num(r[6]); if (n && px[r[0]]) mv += n * 1000 * px[r[0]]; });
+        D.margin[d].ratio = r2(mv / (bal(amt) * 1000) * 100);
+      }
+    } catch (e) { say(`維持率 ${d}：${e.message}`); }
+    say(`融資券 ${d}：融資 ${D.margin[d].finChg} 億、融券 ${D.margin[d].shtChg} 張、維持率 ${D.margin[d].ratio ?? '—'}%`);
   }
 }
 

@@ -41,6 +41,19 @@ th{color:var(--mut);font-weight:500}
 .scroll{overflow-x:auto}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .chip{background:#0f1a2e;border-radius:8px;padding:4px 8px;font-size:12px}
+.mr{background:#0f1a2e;border-radius:10px;padding:10px 12px;margin-top:10px}
+.mr .t{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mr .t b{font-size:22px}
+.mr .zn{font-size:13px;font-weight:700;border-radius:6px;padding:1px 8px}
+.gauge{position:relative;display:flex;height:12px;border-radius:6px;overflow:hidden;margin:12px 0 4px}
+.gauge i{display:block;height:100%}
+.gpin{position:absolute;top:-5px;width:3px;height:22px;background:#fff;border-radius:2px;box-shadow:0 0 0 2px #0f1a2e;transform:translateX(-50%)}
+.gscale{position:relative;height:14px;font-size:10px;color:var(--mut)}
+.gscale span{position:absolute;transform:translateX(-50%)}
+.zones{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+.zones li{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);align-items:flex-start}
+.zones li .r{flex:0 0 74px;font-weight:700;white-space:nowrap}
+.zones li.on{background:rgba(255,255,255,.06);border-radius:6px}
 .stock{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
 .stock:last-child{border-bottom:0}
 .stock .n{font-weight:700}
@@ -112,6 +125,25 @@ const sg = (v, d = 0) => v == null ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : ''
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
 const tag = (t, c) => `<span class="tag ${c}">${t}</span>`;
+// 大盤融資維持率分區（一般市場參考，不是絕對標準）
+const MZ = [
+  { lo: 170, hi: 200, name: '偏熱', c: '#5aa9ff', d: '散戶融資意願強、槓桿水位高，追高風險上升' },
+  { lo: 150, hi: 170, name: '正常', c: '#2ecc71', d: '多數融資戶仍有獲利或小賠，籌碼穩定' },
+  { lo: 140, hi: 150, name: '偏低', c: '#F0E442', d: '不少融資戶已虧損，再跌就開始有追繳壓力' },
+  { lo: 130, hi: 140, name: '危險', c: '#ff9f43', d: '追繳令增加，斷頭賣壓陸續出籠，波動加大' },
+  { lo: 110, hi: 130, name: '恐慌斷頭', c: '#ff5a5a', d: '大量斷頭殺盤，籌碼被迫清洗；歷史上常接近階段低點' },
+];
+const mzOf = v => MZ.find(z => v >= z.lo) || MZ[MZ.length - 1];
+function marginRatio(v, d) {
+  if (v == null) return '<div class="mr"><div class="note" style="margin:0">大盤融資維持率：資料準備中（每天晚上融資券公布後更新）</div></div>';
+  const z = mzOf(v), lo = 110, hi = 200, pos = Math.min(99, Math.max(1, (v - lo) / (hi - lo) * 100));
+  const seg = [...MZ].reverse().map(x => `<i style="width:${(x.hi - x.lo) / (hi - lo) * 100}%;background:${x.c}"></i>`).join('');
+  return `<div class="mr"><div class="t"><span class="mut" style="font-size:13px">大盤融資維持率</span><b style="color:${z.c}">${v.toFixed(1)}%</b><span class="zn" style="background:${z.c};color:#111">${z.name}</span><span class="mut" style="font-size:12px">${d ? md(d) : ''}</span></div>
+    <div class="gauge">${seg}<span class="gpin" style="left:${pos}%"></span></div>
+    <div class="gscale">${[130, 140, 150, 170].map(t => `<span style="left:${(t - lo) / (hi - lo) * 100}%">${t}%</span>`).join('')}</div>
+    <ul class="zones">${MZ.map(x => `<li class="${x === z ? 'on' : ''}"><span class="r" style="color:${x.c}">${x.lo === 110 ? '130% 以下' : x.hi === 200 ? '170% 以上' : x.lo + '～' + x.hi + '%'}</span><span><b>${x.name}</b>：${x.d}</span></li>`).join('')}</ul>
+    <p class="note">維持率＝融資買進股票的目前市值 ÷ 融資借款金額（上市）。個股維持率低於 130% 會被追繳，補不足就斷頭賣出。</p></div>`;
+}
 
 // 10 天長條圖（台股習慣：紅漲綠跌）
 function bars(dates, vals, d = 0, unit = '') {
@@ -271,7 +303,7 @@ async function main() {
     ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
     ['fut', '外資期貨淨未平倉', fmt(tL.net), `<span class="${cls(tL.chg)}">${sg(tL.chg)}口</span>`, sig.fut],
-    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
+    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>${mL.ratio != null ? `・維持率 ${mL.ratio.toFixed(0)}%` : ''}`, sig.mar],
   ];
   let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s} ${tag(g[0], g[1])}</div></a>`).join('')}</div>`;
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
@@ -326,9 +358,11 @@ async function main() {
     <div class="big">融資 <span class="${cls(mL.finChg)}">${sg(mL.finChg, 1)} 億</span></div>
     <div class="chips"><span class="chip">融資餘額 ${fmt(mL.fin, 0)} 億</span><span class="chip">融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}</span> 張</span><span class="chip">融券餘額 ${fmt(mL.sht)} 張</span></div>
     <p class="note">${mLd ? md(mLd) + ' 資料（融資券約晚上 9 點後公布）' : ''}</p>
+    ${marginRatio(mL.ratio ?? null, mLd)}
+    ${M.some(x => x.ratio != null) ? level(days, M.map(x => x.ratio ?? null), M.map((x, i) => x.ratio != null && M[i - 1]?.ratio != null ? Math.round((x.ratio - M[i - 1].ratio) * 10) / 10 : null), v => v.toFixed(1) + '%', v => sg(v, 1), { ref: 130, refLabel: '130% 斷頭線', title: '大盤融資維持率（%）', chgTitle: '增減' }) : ''}
     ${level(days, M.map(x => x.fin ?? null), M.map(x => x.finChg ?? null), v => fmt(v, 0), v => sg(v, 0), { title: '融資餘額（億）', chgTitle: '增減' })}
     ${level(days, M.map(x => x.sht ?? null), M.map(x => x.shtChg ?? null), v => (v / 1e4).toFixed(1) + '萬', v => sg(v / 1e3, 1) + 'k', { title: '融券餘額（張）', chgTitle: '增減' })}
-    ${table(['日期', '融資增減', '融資餘額', '融券增減', '融券餘額'], days.map((d, i) => [md(d), `<span class="${cls(M[i].finChg)}">${sg(M[i].finChg, 1)}</span>`, fmt(M[i].fin), `<span class="${cls(M[i].shtChg)}">${sg(M[i].shtChg)}</span>`, fmt(M[i].sht)]))}
+    ${table(['日期', '融資增減', '融資餘額', '維持率', '融券增減', '融券餘額'], days.map((d, i) => [md(d), `<span class="${cls(M[i].finChg)}">${sg(M[i].finChg, 1)}</span>`, fmt(M[i].fin), M[i].ratio != null ? M[i].ratio.toFixed(1) + '%' : '—', `<span class="${cls(M[i].shtChg)}">${sg(M[i].shtChg)}</span>`, fmt(M[i].sht)]))}
     <div class="how"><b>怎麼看：</b>融資減＝散戶被洗出場、籌碼變乾淨；融資大增＝散戶追價。融券增加＝未來的軋空燃料；融券大減（回補）＝反彈有軋空推力。</div></section>`;
 
   // 7. 權值股
