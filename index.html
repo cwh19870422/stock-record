@@ -105,6 +105,14 @@ nav button .i{font-size:22px}
 .embedpg{margin:-14px}
 .embedpg iframe{display:block;width:100%;border:0;background:#0f1a2e}
 body.embedded{overflow:hidden}
+.hl{min-width:0}
+.hsub{font-size:12px;color:#93a3bf;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hsub:empty{display:none}
+.hr{display:flex;gap:12px;align-items:center;flex:none}
+.hr button{border:0;background:none;color:#5aa9ff;font-size:13px;padding:2px 0;cursor:pointer;white-space:nowrap}
+body.embedded header{background:#0f1a2e;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:6px;border-bottom:0}
+body.embedded header h1{font-size:19px}
+body.embedded #syncState,body.embedded #hSet{display:none}
 nav button.on{color:var(--accent);font-weight:700}
 .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:80;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
@@ -184,8 +192,9 @@ nav button.on{color:var(--accent);font-weight:700}
 
 <div class="app">
   <header>
-    <div style="display:flex;align-items:center"><h1>📈 股票記錄</h1><span class="sync" id="syncState"></span></div>
-    <button class="iconbtn" onclick="openSheet()" aria-label="設定">⚙️</button>
+    <div class="hl"><div style="display:flex;align-items:center"><h1 id="hTitle">✏️ 買賣</h1><span class="sync" id="syncState"></span></div><div class="hsub" id="hSub"></div></div>
+    <div class="hr" id="hLinks"></div>
+    <button class="iconbtn" id="hSet" onclick="openSheet()" aria-label="設定">⚙️</button>
   </header>
 
   <main>
@@ -535,11 +544,27 @@ function go(p,url){
   ['pre','k','rec','view','note'].forEach(x=>{$('pg-'+x).style.display=x===p?'':'none';$('nav-'+x).classList.toggle('on',x===p)});
   $('fab').style.display=p==='note'?'block':'none';
   document.body.classList.toggle('embedded',p==='pre'||p==='k');
+  CUR_TAB=p;setHead(p);
   if(p==='pre'||p==='k'){const f=$('fr-'+p);if(url)f.src=url;else if(!f.getAttribute('src'))f.src=f.dataset.src;fitFrames();}
   else if(p==='view')renderView();else if(p==='note')renderNotes();else renderSellHolds();
   try{localStorage.setItem('app-tab',p)}catch(e){}
   window.scrollTo(0,0);
 }
+// 標題列：一般分頁顯示分頁名稱；盤前／K線分頁顯示內嵌頁自己的標題、狀態與連結
+let CUR_TAB='rec';
+const TAB_TITLE={rec:'✏️ 買賣',view:'📊 損益',note:'📒 筆記'};
+function setHead(p){
+  if(p==='pre'||p==='k'){const f=$('fr-'+p);try{f.contentWindow.postMessage({appHeadAsk:1},location.origin)}catch(e){}return}
+  $('hTitle').textContent=TAB_TITLE[p]||'';$('hSub').innerHTML='';$('hLinks').innerHTML='';fitFrames();
+}
+addEventListener('message',e=>{
+  if(e.origin!==location.origin||!e.data||!e.data.appHead)return;
+  if(!(CUR_TAB==='pre'||CUR_TAB==='k')||e.source!==$('fr-'+CUR_TAB).contentWindow)return;
+  const h=e.data.appHead;
+  $('hTitle').textContent=h.title;$('hSub').innerHTML=h.sub;
+  $('hLinks').innerHTML=h.links.map((t,i)=>`<button onclick="$('fr-'+CUR_TAB).contentWindow.postMessage({appClick:${i}},location.origin)">${esc(t)}</button>`).join('');
+  fitFrames();
+});
 // 內嵌頁高度＝畫面扣掉上方標題列與下方選單
 function fitFrames(){const h=innerHeight-document.querySelector('header').offsetHeight-document.querySelector('nav').offsetHeight;document.querySelectorAll('.embedpg iframe').forEach(f=>f.style.height=h+'px')}
 addEventListener('resize',fitFrames);
