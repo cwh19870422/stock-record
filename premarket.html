@@ -15,10 +15,13 @@ h1{margin:0;font-size:20px}
 .sub{color:var(--mut);font-size:12px}
 main{max-width:760px;margin:0 auto;padding:12px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:8px;margin-bottom:12px}
-.tile{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit;display:block}
-.tile .k{font-size:12px;color:var(--mut)}
-.tile .v{font-size:19px;font-weight:700;margin:2px 0}
-.tile .s{font-size:17px;line-height:1.6;white-space:nowrap;overflow:hidden}
+.tile{position:relative;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit;display:block;min-height:96px}
+.tile .k{font-size:12.5px;color:var(--mut);padding-right:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font-size:22px;font-weight:800;margin:6px 0 2px}
+.tile .s{font-size:15px;font-weight:600;line-height:1.5;white-space:nowrap;overflow:hidden}
+.tile .s .s2{font-size:12.5px}
+.tile .badge{position:absolute;top:0;right:0;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:0 11px 0 10px;color:#0f1a2e;background:#93a3bf}
+.tile .badge.up{background:var(--up)}.tile .badge.dn{background:var(--dn)}
 .tag i{font-style:normal}
 .tile .s .tag{display:inline-flex;align-items:center;box-sizing:border-box;height:.86em;font-size:inherit;line-height:1;padding:0 .4em;vertical-align:.1em}
 .tile .s .tag i{font-size:.62em}
@@ -329,9 +332,9 @@ async function main() {
     ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
     ['fut', '外資期貨' + (tL.net != null ? futSide(tL.net) : '淨部位'), futSize(tL.net), `<span class="${cls(tL.chg)}">${futChg(tL.net, tL.chg, true)}</span>`, sig.fut],
-    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `${mL.ratio != null ? `維持率 ${mL.ratio.toFixed(0)}% {TAG}<br>` : ''}融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
+    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `${mL.ratio != null ? `維持率 ${mL.ratio.toFixed(0)}%<br>` : ''}<span class="s2">融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span></span>`, sig.mar],
   ];
-  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${pm(v)}</div><div class="s">${(s = pm(s)).includes('{TAG}') ? s.replace('{TAG}', tag(g[0], g[1])) : s + ' ' + tag(g[0], g[1])}</div></a>`).join('')}</div>`;
+  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${pm(v)}</div><span class="badge ${g[1]}">${g[0]}</span><div class="s">${pm(s)}</div></a>`).join('')}</div>`;
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
 
   // 1. 指數（含均線扣抵）
@@ -607,8 +610,7 @@ const IDXN = { '01': '水泥工業', '02': '食品工業', '03': '塑膠工業',
 function setTile(id, v, ch, unitPct, label) {
   const t = $('#t-' + id); if (!t || v == null) return;
   t.querySelector('.v').textContent = fmt(v, id === 'sox' ? 0 : 0);
-  const tg = t.querySelector('.s .tag'), up = ch > 0;
-  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${pm(unitPct ? sg(ch, 2) + '%' : sg(ch))}</span> ${tg ? tg.outerHTML : ''}`;
+  t.querySelector('.s').innerHTML = `<span class="${cls(ch)}">${pm(unitPct ? sg(ch, 2) + '%' : sg(ch))}</span>`;
   if (label) t.querySelector('.k').innerHTML = label;
 }
 function liveInit(J) {
@@ -649,10 +651,10 @@ function liveInit(J) {
 }
 main();
 // 小卡下方那排太長時自動縮小字級（最小 12px），避免換行
-function fitTiles(){document.querySelectorAll('.tile .s').forEach(el=>{
+function fitTiles(){document.querySelectorAll('.tile').forEach(t=>{const b=t.querySelector('.badge'),k=t.querySelector('.k');if(b&&k)k.style.paddingRight=(b.offsetWidth+4)+'px'});document.querySelectorAll('.tile .s').forEach(el=>{
   el.style.fontSize='';const w=el.clientWidth;if(!w)return;
   const nat=()=>{el.style.width='max-content';const n=el.getBoundingClientRect().width;el.style.width='';return n};
-  let f=17;while(nat()>w-2&&f>12){f-=.5;el.style.fontSize=f+'px'}})}
+  let f=15;while(nat()>w-2&&f>11){f-=.5;el.style.fontSize=f+'px'}})}
 new MutationObserver(()=>requestAnimationFrame(fitTiles)).observe(document.body,{childList:true,subtree:true,characterData:true});
 addEventListener('resize',fitTiles);
 </script>
