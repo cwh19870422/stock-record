@@ -562,7 +562,8 @@ addEventListener('message',e=>{
   if(!(CUR_TAB==='pre'||CUR_TAB==='k')||e.source!==$('fr-'+CUR_TAB).contentWindow)return;
   const h=e.data.appHead;
   $('hTitle').textContent=h.title;$('hSub').innerHTML=h.sub;
-  $('hLinks').innerHTML=h.links.map((t,i)=>`<button onclick="$('fr-'+CUR_TAB).contentWindow.postMessage({appClick:${i}},location.origin)">${esc(t)}</button>`).join('');
+  // 分頁之間的快速連結（盤前看板／自選／K線圖）不顯示，只保留「設定」這類功能按鈕
+  $('hLinks').innerHTML=h.links.map((t,i)=>/盤前|自選|K線/.test(t)?'':`<button onclick="$('fr-'+CUR_TAB).contentWindow.postMessage({appClick:${i}},location.origin)">${esc(t)}</button>`).join('');
   fitFrames();
 });
 // 內嵌頁高度＝畫面扣掉上方標題列與下方選單
