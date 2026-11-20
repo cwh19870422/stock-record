@@ -72,6 +72,9 @@ details.sec>summary .arw{color:var(--mut);font-size:13px;flex:none;transition:tr
 details.sec[open]>summary .arw{transform:rotate(90deg)}
 details.sec>summary .big{font-size:20px}
 .bigsub{font-size:15px;margin-top:4px}
+.chips.bigsub{gap:5px}
+.chips.bigsub::-webkit-scrollbar{display:none}
+.chips.bigsub .chip{font-size:12px;padding:3px 7px;white-space:nowrap;flex:none}
 details.sec[open]>summary .big{font-size:26px}
 .hint{font-size:12px;font-weight:600;color:#F0E442;background:rgba(240,228,66,.12);border-radius:6px;padding:1px 8px}
 .kl{font-size:12px;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:99px;padding:1px 8px;text-decoration:none}
@@ -130,7 +133,7 @@ const sg = (v, d = 0) => v == null ? '—' : (v > 0 ? '▲' : v < 0 ? '▼' : ''
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : 'mut';
 const md = d => d ? d.slice(5).replace('-', '/') : '';
 // 小卡用 +／- 符號（不用箭頭）
-const pm = x => String(x).replace(/▲/g, '+').replace(/▼/g, '-');
+const pm = x => String(x); // 目前維持箭頭（若要改回 +／-：把 ▲ 換成 +、▼ 換成 -）
 const tag = (t, c) => `<span class="tag ${c}"><i>${t}</i></span>`;
 // 外資期貨：把正負號換成白話（空單／多單、比前一天多／少幾口）
 const futSide = net => net < 0 ? '空單' : '多單';
@@ -350,7 +353,7 @@ async function main() {
   const usL = k => lastOf(J.us[k]);
   h += `<section id="sox"><h2>③ 費城半導體 ${tag(sig.sox[0], sig.sox[1])} <a class="kl" href="chart.html?s=SOX">K線</a></h2>
     ${sL ? `<div class="big">${fmt(sL.c, 2)}<small class="${cls(sL.p)}">${sg(sL.ch, 2)}（${fmt(Math.abs(sL.p), 2)}%）</small></div><p class="note">美國 ${md(sL.d)} 收盤</p>` : '<p class="note">尚無資料</p>'}
-    <div class="chips">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = withCh(J.us[k], usL(k)); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.ch, 0)}（${fmt(Math.abs(x?.p), 2)}%）</span></span>`; }).join('')}</div>
+    <div class="chips bigsub">${[['DJI', '道瓊'], ['IXIC', '那斯達克'], ['GSPC', 'S&P500']].map(([k, n]) => { const x = withCh(J.us[k], usL(k)); return `<span class="chip">${n} <span class="${cls(x?.p)}">${sg(x?.ch, 0)}（${fmt(Math.abs(x?.p), 2)}%）</span></span>`; }).join('')}</div>
     ${minik(kItem('SOX'), 170, 30, { ma: [5, 20] })}
     ${table(['美股日', '費半', '漲跌%'], S.map((x, i) => [md(x?.d || days[i]), fmt(x?.c, 2), `<span class="${cls(x?.p)}">${sg(x?.p, 2)}</span>`]))}
     <div class="how"><b>美股交易時間（台灣時間）：</b>${usHours()}</div></section>`;
