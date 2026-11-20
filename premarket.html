@@ -303,9 +303,9 @@ async function main() {
     ['sox', '費城半導體', sL ? fmt(sL.c, 0) : '—', sL ? `<span class="${cls(sL.p)}">${sg(sL.ch, 0)}（${fmt(Math.abs(sL.p), 2)}%）</span>` : '', sig.sox],
     ['inst', `三大法人合計 <small>${md(days[F.findLastIndex(x => x.tot != null)])}</small>`, fL.tot != null ? sg(fL.tot, 0) + '億' : '—', `外資 <span class="${cls(fL.fi)}">${sg(fL.fi, 0)}</span>`, sig.inst],
     ['fut', '外資期貨淨未平倉', fmt(tL.net), `<span class="${cls(tL.chg)}">${sg(tL.chg)}口</span>`, sig.fut],
-    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>${mL.ratio != null ? `・維持率 ${mL.ratio.toFixed(0)}%` : ''}`, sig.mar],
+    ['mar', `融資增減 <small>${mLd ? md(mLd) : ''}</small>`, mL.finChg != null ? sg(mL.finChg, 1) + '億' : '—', `${mL.ratio != null ? `維持率 ${mL.ratio.toFixed(0)}% {TAG}<br>` : ''}融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}張</span>`, sig.mar],
   ];
-  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s} ${tag(g[0], g[1])}</div></a>`).join('')}</div>`;
+  let h = `<div class="grid">${tiles.map(([id, k, v, s, g]) => `<a class="tile" id="t-${id}" href="#${id}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s.includes('{TAG}') ? s.replace('{TAG}', tag(g[0], g[1])) : s + ' ' + tag(g[0], g[1])}</div></a>`).join('')}</div>`;
   h += `<div class="sum">📌 ${agree}<br><span class="mut">盤勢位置：</span>${above5 ? '站上' : '跌破'}5均（${fmt(ix.ma5)}），${above20 ? '站上' : '跌破'}月線（${fmt(ix.ma20)}）</div>`;
 
   // 1. 指數（含均線扣抵）
