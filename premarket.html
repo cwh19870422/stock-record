@@ -71,6 +71,7 @@ details.sec>summary .row{display:flex;justify-content:space-between;align-items:
 details.sec>summary .arw{color:var(--mut);font-size:13px;flex:none;transition:transform .2s}
 details.sec[open]>summary .arw{transform:rotate(90deg)}
 details.sec>summary .big{font-size:20px}
+.bigsub{font-size:15px;margin-top:4px}
 details.sec[open]>summary .big{font-size:26px}
 .hint{font-size:12px;font-weight:600;color:#F0E442;background:rgba(240,228,66,.12);border-radius:6px;padding:1px 8px}
 .kl{font-size:12px;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:99px;padding:1px 8px;text-decoration:none}
@@ -364,7 +365,7 @@ async function main() {
   const fShort = tL.net == null || tL.net < 0;
   h += `<section id="fut"><h2>⑤ 外資台指期${fShort ? '空單' : '多單'} ${tag(sig.fut[0], sig.fut[1])} <span class="hint">偏短線、看態度</span></h2>
     <div class="big">外資手上${fShort ? '空單' : '多單'} ${futSize(tL.net)}</div>
-    <div style="font-size:15px;margin-top:4px" class="${cls(tL.chg)}">${futChg(tL.net, tL.chg)}</div>
+    <div class="bigsub ${cls(tL.chg)}">${futChg(tL.net, tL.chg)}</div>
     <p class="note">空單像壓在台股上的沙包：沙包變多＝壓力增加（綠），沙包變少＝壓力減輕（紅）</p>
     ${level(days, T.map(x => x.net == null ? null : Math.abs(x.net)), T.map(x => x.chg ?? null), v => (v / 1e4).toFixed(2) + '萬', c => (fShort ? (c > 0 ? '少' : '多') : (c > 0 ? '多' : '少')) + (Math.abs(c) / 1e3).toFixed(1) + 'k', { ref: 100000, refLabel: '10萬口（歷史高檔）', title: `外資${fShort ? '空單' : '多單'}口數（越高${fShort ? '壓力越大' : '越偏多'}）`, chgTitle: '比前一天' })}
     ${table(['日期', `外資${fShort ? '空單' : '多單'}`, '比前一天', '意思'], days.map((d, i) => { const n = T[i].net, c = T[i].chg; return [md(d), n == null ? '—' : fmt(Math.abs(n)) + ' 口', `<span class="${cls(c)}">${futChg(n, c, true)}</span>`, c == null || !c ? '—' : `<span class="${cls(c)}">${c > 0 ? (n < 0 ? '壓力減輕' : '偏多加強') : (n < 0 ? '壓力增加' : '偏多減弱')}</span>`]; }))}
@@ -373,6 +374,7 @@ async function main() {
   // 6. 融資融券
   h += `<section id="mar"><h2>⑥ 融資融券 ${tag(sig.mar[0], sig.mar[1])}</h2>
     <div class="big">融資 <span class="${cls(mL.finChg)}">${sg(mL.finChg, 1)} 億</span></div>
+    <div class="bigsub">${mL.ratio != null ? `維持率 <b style="color:${mzOf(mL.ratio).c}">${mL.ratio.toFixed(1)}%</b>（${mzOf(mL.ratio).name}）・` : ''}融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)} 張</span></div>
     <div class="chips"><span class="chip">融資餘額 ${fmt(mL.fin, 0)} 億</span><span class="chip">融券 <span class="${cls(mL.shtChg)}">${sg(mL.shtChg)}</span> 張</span><span class="chip">融券餘額 ${fmt(mL.sht)} 張</span></div>
     <p class="note">${mLd ? md(mLd) + ' 資料（融資券約晚上 9 點後公布）' : ''}</p>
     ${marginRatio(mL.ratio ?? null, mLd)}
@@ -417,8 +419,8 @@ async function main() {
     const d = document.createElement('details'); d.className = 'sec'; d.id = sec.id;
     const sum = document.createElement('summary'), row = document.createElement('div'); row.className = 'row';
     const left = document.createElement('div'), arw = document.createElement('span'); arw.className = 'arw'; arw.textContent = '▶';
-    const h2 = sec.querySelector('h2'), big = sec.querySelector(':scope > .big');
-    left.append(h2); if (big) left.append(big);
+    const h2 = sec.querySelector('h2'), big = sec.querySelector(':scope > .big'), bs = sec.querySelector(':scope > .bigsub');
+    left.append(h2); if (big) left.append(big); if (bs) left.append(bs);
     row.append(left, arw); sum.append(row); d.append(sum);
     while (sec.firstChild) d.append(sec.firstChild);
     d.open = !!saved[d.id];
