@@ -26,6 +26,7 @@ h1{margin:0;font-size:19px}
 .cats button.add,.grps button.add{color:var(--blue);border-style:dashed}
 main{max-width:760px;margin:0 auto;padding:10px}
 .bar{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.hbar{margin:6px 0 0}
 .bar button{background:var(--card);color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
 .bar button.on{color:var(--tx);border-color:var(--blue)}
 .srch{position:relative;flex:1}
@@ -53,11 +54,11 @@ main{max-width:760px;margin:0 auto;padding:10px}
 <header>
   <div class="top"><h1>📈 技術分析 K線圖</h1><div class="nav"><a href="premarket.html">盤前看板</a><a href="chart.html">K線圖</a><a href="#" id="setBtn">⚙️ 設定</a></div></div>
   <div class="sub"><span id="sync">同步中…</span> <span id="live"></span></div>
+  <div class="bar hbar"><div class="srch"><input id="q" placeholder="搜尋股票加入這個分類" autocomplete="off" enterkeyhint="search"><div class="sug" id="sug"></div></div></div>
   <div class="cats" id="cats"></div>
   <div class="grps" id="grps"></div>
 </header>
 <main>
-  <div class="bar"><div class="srch"><input id="q" placeholder="搜尋股票加入這個分類" autocomplete="off" enterkeyhint="search"><div class="sug" id="sug"></div></div></div>
   <div class="bar" id="sort"><span class="mut" style="font-size:13px">排序</span><button data-k="none" class="on">加入順序</button><button data-k="p">漲跌幅</button><button data-k="c">股價</button><button data-k="v">成交量</button></div>
   <div id="list"></div>
 </main>
@@ -124,7 +125,7 @@ function stat(code) {
 function drawTabs() {
   const D = WL.data, sysBtn = SIM?.patterns?.length ? `<button data-c="sys" class="${isSys() ? 'on' : ''}">🔍 系統選股</button>` : '';
   if (isSys() && !SIM?.patterns?.length) return;
-  document.querySelector('.bar .srch').parentElement.style.display = isSys() ? 'none' : '';
+  $('#q').placeholder = isSys() ? '🔍 搜尋股票看 K 線' : '🔍 搜尋股票加入這個分類';
   if (isSys()) {
     if (!simPat()) grp = 'sys:' + SIM.patterns[0].id;
     $('#cats').innerHTML = sysBtn + D.cats.map(c => `<button data-c="${c.id}">📁 ${esc(c.name)}</button>`).join('') + `<button class="add" data-addcat>＋ 大分類</button>`;
@@ -232,10 +233,11 @@ function confirmDel(what, ok, closeParent) {
 }
 // 搜尋加入
 const find = v => { v = v.trim(); if (!v) return []; const sc = x => x[0] === v || x[1] === v ? 0 : x[0].startsWith(v) || x[1].startsWith(v) ? 1 : 2; return LIST.filter(x => x[0].startsWith(v) || x[1].includes(v)).sort((a, b) => sc(a) - sc(b) || a[0].localeCompare(b[0])).slice(0, 30); };
-$('#q').oninput = () => { const r = find($('#q').value); $('#sug').innerHTML = r.map(x => { const inG = WL.findG(grp)?.codes.includes(x[0]); return `<div data-c="${x[0]}">${x[0]} ${esc(x[1])}<span>${x[2]}${x[3] ? '・' + esc(x[3]) : ''}</span>${inG ? '<span style="color:#F0E442">已加入</span>' : '<span style="color:#5aa9ff;float:right">＋ 加入</span>'}</div>`; }).join('') || ($('#q').value.trim() ? '<div class="mut">找不到符合的股票</div>' : ''); $('#sug').style.display = $('#sug').innerHTML ? 'block' : 'none'; };
+$('#q').oninput = () => { const r = find($('#q').value); $('#sug').innerHTML = r.map(x => { const inG = WL.findG(grp)?.codes.includes(x[0]); return `<div data-c="${x[0]}">${x[0]} ${esc(x[1])}<span>${x[2]}${x[3] ? '・' + esc(x[3]) : ''}</span>${isSys() ? '<span style="color:#5aa9ff;float:right">看 K 線 ›</span>' : inG ? '<span style="color:#F0E442">已加入</span>' : '<span style="color:#5aa9ff;float:right">＋ 加入</span>'}</div>`; }).join('') || ($('#q').value.trim() ? '<div class="mut">找不到符合的股票</div>' : ''); $('#sug').style.display = $('#sug').innerHTML ? 'block' : 'none'; };
 $('#sug').onclick = e => {
   const d = e.target.closest('[data-c]'); if (!d) return;
   const c = d.dataset.c, g = WL.findG(grp);
+  if (isSys()) { location.href = 'chart.html?s=' + c; return; }
   if (g && !g.codes.includes(c)) { WL.setMembership(c, [...WL.groupsOf(c), grp]); }
   $('#q').value = ''; $('#sug').style.display = 'none'; redraw(); liveTick();
 };
