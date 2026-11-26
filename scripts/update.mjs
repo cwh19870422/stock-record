@@ -161,15 +161,6 @@ async function updateNews() {
     try {
       if (!(await exists(`news_${date}_${code}`))) await put(`news_${date}_${code}`, await news(name || code, date, 5), date);
       if (!(await exists(`news_${date}_MKT`))) await put(`news_${date}_MKT`, await news('台股 大盤', date, 3), date);
-      const m = MKTOF.get(code);
-      if (m !== '興' && !(await exists(`tick_${date}_${code}`))) {
-        const x = await ticksYahoo(`${code}.${m === '櫃' ? 'TWO' : 'TW'}`, date);
-        await put(`tick_${date}_${code}`, x || { e: 1 }, date); console.log(`走勢 ${code} ${date}：${x ? x.p.length + ' 點（' + x.iv + '）' : '無資料'}`);
-      }
-      if (!(await exists(`tick_${date}_MKT`))) {
-        const x = await ticksIndex(date);
-        await put(`tick_${date}_MKT`, x || { e: 1 }, date); console.log(`大盤走勢 ${date}：${x ? x.p.length + ' 點' : '無資料'}`);
-      }
       await fetch(`https://firestore.googleapis.com/v1/${d.name}`, { method: 'DELETE', headers: H });
       n++;
       await new Promise(r => setTimeout(r, 800));
@@ -186,6 +177,6 @@ async function probeTicks() {
   console.log(`走勢來源檢查 ${d}：個股 ${a ? a.p.length + ' 點（' + a.iv + '）' : '失敗'}，大盤 ${b ? b.p.length + ' 點' : '失敗'}`);
 }
 fs.mkdirSync('data', { recursive: true });
-for (const [name, fn] of [['股票', updateStocks], ['大盤', updateMarket], ['補大盤', backfillMarket],['新聞', updateNews], ['走勢檢查', probeTicks]]) {
+for (const [name, fn] of [['股票', updateStocks], ['大盤', updateMarket], ['補大盤', backfillMarket],['新聞', updateNews]]) {
   try { await fn(); } catch (e) { console.log(`⚠️ ${name}更新失敗：`, e.message); }
 }

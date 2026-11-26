@@ -64,13 +64,7 @@ textarea{min-height:64px;resize:vertical}
 .cpl{display:flex;justify-content:space-between;gap:10px;margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
 .cpl span{display:block;font-size:12px;color:var(--sub)}.cpl b{font-size:22px;font-weight:700;white-space:nowrap}
 .cpl.c3{align-items:flex-end}.cpl.c3 i{font-style:normal;color:var(--sub);font-size:16px;padding-bottom:4px}.cpl.c3 b{font-size:20px}
-.mktt{cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px}.mkt+.mkt{margin-top:6px}
-.tkx{margin-left:auto;font-size:12px;color:var(--accent);white-space:nowrap}
-.tk{margin-top:8px}.tkbox{background:#fff;border-radius:8px;padding:6px 8px 2px;margin-bottom:6px}
-.tkh{display:flex;justify-content:space-between;gap:8px;font-size:12px;flex-wrap:wrap}.tkh b{font-size:13px}
-.tkmsg{font-size:12px;color:var(--sub);padding:10px 0 12px}
-.tksvg{width:100%;height:auto;display:block}.tkax{font-size:9px;fill:var(--sub)}.tkgrid{stroke:#eef0f4;stroke-width:1}
-.tkref{stroke:#9aa3b2;stroke-width:1;stroke-dasharray:3 3}.tkmk{font-size:10px;font-weight:700}
+.mktt{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px}.mkt+.mkt{margin-top:6px}
 .chip.edit{padding-right:6px}.chip.edit .x{display:inline-block;margin-left:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f1d6d6;color:var(--up);font-size:12px}
 .lblrow{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}.lblrow label.f{margin:0}
 .lnk{border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0}
@@ -98,7 +92,7 @@ details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4
 .filters{display:flex;flex-direction:column;gap:8px}
 .item{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .item .h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.item .nm{font-weight:700}
+.item .nm{font-weight:700;display:flex;align-items:center;gap:6px}
 .item .meta{font-size:12px;color:var(--sub);margin-top:3px}
 .item .pl{font-weight:700;font-size:17px;text-align:right;white-space:nowrap}
 .item .pct{font-size:12px;text-align:right}
@@ -111,7 +105,7 @@ details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4
 .lots{margin-top:6px}
 .rg{display:flex;gap:6px;overflow-x:auto}.rg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 0;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;min-width:52px}.rg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .qd{display:flex;gap:6px;margin-top:6px}.qd button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px;color:var(--accent);cursor:pointer}
-.hdays{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent2);border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.hdays{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent2);border-radius:6px;padding:1px 7px;margin-left:auto;white-space:nowrap}
 .acts{display:flex;gap:16px;margin-top:8px}
 .acts button{border:0;background:none;color:#9aa1af;font-size:12px;cursor:pointer;padding:0}
 .empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
@@ -509,21 +503,13 @@ function start(u){
   unsub.push(U().collection('sells').onSnapshot({includeMetadataChanges:true},s=>{DB.sells=s.docs.map(d=>({...d.data(),id:d.id}));st(s);refresh()}));
   unsub.push(U().collection('notes').onSnapshot(s=>{NOTES=s.docs.map(d=>({...d.data(),id:d.id}));refresh()}));
   unsub.push(U().onSnapshot(d=>{const nf=d.data()&&d.data().noteFolders;FOLDERS=nf||JSON.parse(JSON.stringify(DEF_FOLDERS));const x=d.data()&&d.data().set;if(x){DB.set={...JSON.parse(JSON.stringify(DEF_SET)),...x};DB.set.reasons={...DEF_SET.reasons,...(x.reasons||{})}}refresh()}));
-  unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh();setTimeout(backfillTicks,3000)},()=>{}));
+  unsub.push(fb.db.collection('auto').onSnapshot(s=>{AUTO={};s.forEach(d=>{try{AUTO[d.id]=JSON.parse(d.data().json||'[]')}catch(e){}});refresh()},()=>{}));
   $('bDate').value=nowLocal(); refresh();
   let t='pre';try{t=localStorage.getItem('app-tab')||'pre'}catch(e){}
   if(!$('pg-'+t))t='pre'; go(t);
 }
 let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView();if($('pg-note').style.display!=='none')renderNotes()},30)}
 
-// 最近 60 天的買賣若還沒有當日走勢，排進佇列讓每日更新補抓（每次開 App 只做一次）
-let BF=false;
-function backfillTicks(){
-  if(BF||!uid)return;BF=true;
-  const lim=new Date(Date.now()-60*864e5).toISOString().slice(0,10);
-  const seen=new Set();
-  [...DB.buys,...DB.sells].forEach(o=>{const d=o.date.slice(0,10),k=d+'_'+o.code;if(d>=lim&&!seen.has(k)&&!AUTO['tick_'+k]){seen.add(k);queueNews(o.code,o.date)}});
-}
 // 寫入：買賣紀錄 + 排入新聞佇列
 function saveRec(k,o){
   const {id,fee,...data}=o;
@@ -532,7 +518,7 @@ function saveRec(k,o){
 }
 function queueNews(code,date){
   const d=date.slice(0,10);
-  if(AUTO['news_'+d+'_'+code]&&AUTO['tick_'+d+'_'+code])return;
+  if(AUTO['news_'+d+'_'+code])return;
   fb.db.collection('queue').doc(d+'_'+code).set({code,name:info(code).name,date:d}).catch(()=>{});
 }
 let sT; function saveSet(){
@@ -803,52 +789,18 @@ function mktHtml(o,lbl,marks){
     else if(!MKT_LAST||d>MKT_LAST)top='📊 當日大盤：收盤後自動補上（約 16:40）';
     else top='📊 當日大盤：休市日';}
   top=top.replace('當日大盤',L);
-  const mk=esc(JSON.stringify((marks||[]).map(x=>({k:x.k,t:x.date.slice(11,16),p:x.price}))));
-  const tk=`<div class="mktt" data-k="T${esc(o.id)}_${d}" onclick="tog(this)">${top}<span class="tkx">▾ 走勢圖</span></div><div class="tk" style="display:none" data-c="${esc(o.code)}" data-d="${d}" data-m="${mk}"></div>`;
+  const tk=`<div class="mktt">${top}</div>`;
   const note=o.mktNote?`<div style="margin-top:4px">📝 ${esc(o.mktNote)}</div>`:'';
   const n=sn.length+mn.length;
   const list=a=>a.map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">📰 ${esc(x.t)} <small>${esc(x.s)}</small></a>`).join('');
   const news=n?`<div class="expand" data-k="N${esc(o.id)}_${d}" onclick="tog(this)">▾ 當日新聞（${n}）</div><div class="news" style="display:none">${sn.length?`<div class="hd">${esc(info(o.code).name)}</div>${list(sn)}`:''}${mn.length?`<div class="hd">大盤</div>${list(mn)}`:''}</div>`:'';
   return `<div class="mkt">${tk}${note}${news}</div>`;
 }
-// 當日走勢圖：個股在上、大盤在下（資料由每日更新寫入 Firebase auto/tick_日期_代號）
-function drawTk(el){
-  const c=el.dataset.c,d=el.dataset.d,marks=JSON.parse(el.dataset.m||'[]');
-  const one=(x,name,mk)=>{
-    if(!x){const today=nowLocal().slice(0,10);
-      return `<div class="tkbox"><div class="tkh"><b>${esc(name)}</b></div><div class="tkmsg">${d>=today?'收盤後自動補上（約 16:40 之後）':'走勢資料抓取中，每日 16:35～19:50 更新後就會出現'}</div></div>`}
-    if(x.e||!x.p||!x.p.length)return `<div class="tkbox"><div class="tkh"><b>${esc(name)}</b></div><div class="tkmsg">查無這天的分鐘資料（資料來源只保留約 60 天）</div></div>`;
-    return tkSvg(x,name,mk);
-  };
-  el.innerHTML=one(AUTO['tick_'+d+'_'+c],c+' '+info(c).name,marks)+one(AUTO['tick_'+d+'_MKT'],'加權指數',[]);
-  if(!AUTO['tick_'+d+'_'+c]||!AUTO['tick_'+d+'_MKT'])try{queueNews(c,d)}catch(e){}
-}
-function tkSvg(x,name,marks){
-  const W=320,H=120,pl=4,pr=44,pt=8,pb=16,T=270;
-  const last=x.p[x.p.length-1],y0=x.y||x.p[0];
-  const vals=[...x.p,y0,...marks.map(m=>m.p)];let lo=Math.min(...vals),hi=Math.max(...vals);
-  const pad=(hi-lo||hi*0.01)*0.08;lo-=pad;hi+=pad;
-  const X=m=>pl+(W-pl-pr)*Math.max(0,Math.min(T,m))/T,Y=v=>pt+(H-pt-pb)*(hi-v)/(hi-lo);
-  const col=last>y0?'var(--up)':last<y0?'var(--down)':'var(--sub)';
-  const path=x.t.map((m,i)=>(i?'L':'M')+X(m).toFixed(1)+' '+Y(x.p[i]).toFixed(1)).join('');
-  const area=path+`L${X(x.t[x.t.length-1]).toFixed(1)} ${Y(y0).toFixed(1)}L${X(x.t[0]).toFixed(1)} ${Y(y0).toFixed(1)}Z`;
-  const ax=[0,60,120,180,240].map(m=>`<text x="${X(m)}" y="${H-3}" class="tkax" text-anchor="${m?'middle':'start'}">${9+m/60}:00</text><line x1="${X(m)}" x2="${X(m)}" y1="${pt}" y2="${H-pb}" class="tkgrid"/>`).join('');
-  const f=v=>v>=1000?Math.round(v).toLocaleString('zh-TW'):(+v).toFixed(2).replace(/\.?0+$/,'');
-  const mk=marks.map(m=>{const [h,mm]=(m.t||'13:30').split(':').map(Number),t=(h-9)*60+mm,c=m.k==='b'?'var(--up)':'var(--down)';
-    return `<circle cx="${X(t)}" cy="${Y(m.p)}" r="4.5" fill="${c}" stroke="#fff" stroke-width="1.5"/><text x="${Math.min(X(t),W-pr-30)}" y="${Math.max(Y(m.p)-8,pt+8)}" class="tkmk" fill="${c}">${m.k==='b'?'買':'賣'} ${f(m.p)}</text>`}).join('');
-  const ch=last-y0,pc=y0?ch/y0*100:0;
-  return `<div class="tkbox"><div class="tkh"><b>${esc(name)}</b><span class="${cls(ch)}">${f(last)}　${ch>0?'▲':ch<0?'▼':''}${f(Math.abs(ch))}（${pc>0?'+':''}${pc.toFixed(2)}%）</span></div>
-   <svg viewBox="0 0 ${W} ${H}" class="tksvg">${ax}
-    <line x1="${pl}" x2="${W-pr}" y1="${Y(y0)}" y2="${Y(y0)}" class="tkref"/><text x="${W-pr+3}" y="${Y(y0)+3}" class="tkax">${f(y0)}</text>
-    <text x="${W-pr+3}" y="${pt+6}" class="tkax">${f(hi-pad)}</text><text x="${W-pr+3}" y="${H-pb}" class="tkax">${f(lo+pad)}</text>
-    <path d="${area}" fill="${col}" opacity=".08"/><path d="${path}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/>${mk}</svg></div>`;
-}
 // 展開狀態記住，盤中每 20 秒重畫時不會自己收起來
 const OPEN=new Set();
 function tog(el){const n=el.nextElementSibling,show=!!n.style.display;n.style.display=show?'':'none';
-  if(el.dataset.k)show?OPEN.add(el.dataset.k):OPEN.delete(el.dataset.k);
-  if(show&&n.classList.contains('tk'))drawTk(n)}
-function restoreOpen(root){root.querySelectorAll('[data-k]').forEach(el=>{if(OPEN.has(el.dataset.k)){const n=el.nextElementSibling;n.style.display='';if(n.classList.contains('tk'))drawTk(n)}})}
+  if(el.dataset.k)show?OPEN.add(el.dataset.k):OPEN.delete(el.dataset.k);}
+function restoreOpen(root){root.querySelectorAll('[data-k]').forEach(el=>{if(OPEN.has(el.dataset.k)){const n=el.nextElementSibling;n.style.display=''}})}
 
 // ================= 觀看 =================
 function setView(v){view=v;document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));renderView()}
