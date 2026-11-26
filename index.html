@@ -51,6 +51,17 @@ textarea{min-height:64px;resize:vertical}
 .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 13px;font-size:14px;color:var(--sub);cursor:pointer}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .chip.add{border-style:dashed;color:var(--accent)}
+.chip.miss.on{background:#b5651d;border-color:#b5651d}
+.slbar{display:flex;gap:8px;margin-top:10px}
+.sl{flex:1;min-width:0;border-radius:10px;padding:7px 10px;font-size:13px}
+.sl span{color:var(--sub);margin-right:6px}.sl b{font-size:17px}.sl small{display:block;font-size:12px;color:var(--sub);margin-top:1px}
+.slnote{font-size:12px;color:var(--sub);margin-top:4px}
+.sl.stop{background:var(--downbg)}.sl.stop b{color:var(--down)}
+.sl.tgt{background:var(--upbg)}.sl.tgt b{color:var(--up)}
+.sl.hit{outline:2px solid currentColor}.sl.stop.hit{color:var(--down)}.sl.tgt.hit{color:var(--up)}
+.sl.none{background:#f4f6fa;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
+.hold .slbar{margin-top:8px}.hold .sl{padding:5px 8px}.hold .sl b{font-size:15px}
+.item .why .miss{color:#b5651d;font-weight:600}
 .chip.edit{padding-right:6px}.chip.edit .x{display:inline-block;margin-left:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f1d6d6;color:var(--up);font-size:12px}
 .lblrow{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}.lblrow label.f{margin:0}
 .lnk{border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0}
@@ -270,6 +281,11 @@ nav button.on{color:var(--accent);font-weight:700}
           <div class="chips" id="rs-sell"></div>
           <input id="sReason" placeholder="補充說明（選填）" style="margin-top:8px">
 
+          <div class="lblrow"><label class="f">買進失誤（選填・可複選）</label><button class="lnk" id="edBtn-bmiss" onclick="toggleRsEdit('bmiss')">✎ 編輯按鈕</button></div>
+          <div class="chips" id="rs-bmiss"></div>
+          <div class="lblrow"><label class="f">賣出失誤（選填・可複選）</label><button class="lnk" id="edBtn-smiss" onclick="toggleRsEdit('smiss')">✎ 編輯按鈕</button></div>
+          <div class="chips" id="rs-smiss"></div>
+
           <label class="f">檢討／學到什麼（選填）</label>
           <textarea id="sReview" placeholder="例如：太早賣、有照停損紀律…"></textarea>
           <label class="f">盤勢／新聞補充（選填）</label>
@@ -401,18 +417,46 @@ nav button.on{color:var(--accent);font-weight:700}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="pm/rt.js?v=2"></script>
 <script>
 // ================= 基本設定 =================
 const DEF_SET={disc:0.28,min:20,bondTax:0,stopPct:5,targetPct:10,tags:["短線","波段","存股","題材","跟單"],
   reasons:{buy:["財報／法說佳","技術面突破","回檔加碼","定期存股","題材發酵","領股息","營收成長","別人推薦"],
-           sell:["達目標價","跌破停損","獲利了結","換股","需要資金","題材結束","基本面轉差"]}};
+           sell:["達目標價","跌破停損","獲利了結","換股","需要資金","題材結束","基本面轉差"],
+           bmiss:["追高","沒等回檔","聽消息衝動買","沒做功課","部位太大","逆勢攤平"],
+           smiss:["太早賣","沒照停損","凹單","恐慌殺低","貪心沒停利","賣在低點"]}};
+const RS_LABEL={buy:'買進原因',sell:'賣出原因',bmiss:'買進失誤',smiss:'賣出失誤'};
 const DEF_FOLDERS=[{id:'f1',name:'經典名句'},{id:'f2',name:'注意事項'},{id:'f3',name:'操作心法'}];
 let NOTES=[], FOLDERS=null, IMGC={}, nCur='all', nTag=null;
 let STOCKS=[], SMAP={}, PRICES={date:'',p:{}}, MKT={}, MKT_LAST='', AUTO={};
 let DB={buys:[],sells:[],set:JSON.parse(JSON.stringify(DEF_SET))};
 let fb=null, uid=null, unsub=[];
 let mode='buy', unitB=1000, unitS=1000, picked=null, pickedSell=null, view='hold';
-const rsSel={buy:new Set(),sell:new Set()}, rsEdit={buy:false,sell:false};
+const rsSel={buy:new Set(),sell:new Set(),bmiss:new Set(),smiss:new Set()}, rsEdit={buy:false,sell:false,bmiss:false,smiss:false};
+// 盤中即時報價（透過 pm/rt.js 的轉接站），沒有時退回前一日收盤價
+let LIVE={}, LIVE_AT=0, LIVE_T='', LIVE_D='';
+function px(code){const l=LIVE[code];return l&&l.z!=null?l.z:PRICES.p[code]}
+function pxLbl(){const L=Object.keys(LIVE).length;
+  if(L&&window.RT&&RT.stockLive())return `<span style="color:var(--up)">●</span> 盤中即時 ${RT.hhmmss(LIVE_T)}`;
+  if(L&&LIVE_D)return '依 '+LIVE_D.slice(5).replace('-','/')+' 收盤價';
+  return PRICES.date?'依 '+PRICES.date.slice(5).replace('-','/')+' 收盤價':'尚無收盤價'}
+async function liveTick(force){
+  if(!window.RT||!RT.on||!uid)return;
+  if(!(CUR_TAB==='view'||(CUR_TAB==='rec'&&mode==='sell')))return;
+  // 盤中每 20 秒更新；非盤中只在剛打開時抓一次（取得最新收盤）
+  if(!force&&!RT.stockLive())return;
+  if(Date.now()-LIVE_AT<15000)return;
+  const codes=compute().holds.map(h=>h.code).filter(c=>info(c).m!=='興');
+  if(!codes.length)return;
+  LIVE_AT=Date.now();
+  try{
+    const Q=await RT.q(codes.map(c=>(info(c).m==='櫃'?'otc_':'tse_')+c+'.tw'));
+    const n={};let t='',d='';
+    Object.values(Q).forEach(x=>{if(x.z==null||!x.d||x.d<(PRICES.date||''))return;n[x.c]=x;if(x.t&&x.t>t)t=x.t;if(x.d>d)d=x.d});
+    LIVE=n;LIVE_T=t;LIVE_D=d;refresh();
+  }catch(e){}
+}
+setInterval(()=>liveTick(false),20000);
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -460,7 +504,7 @@ function start(u){
   let t='pre';try{t=localStorage.getItem('app-tab')||'pre'}catch(e){}
   if(!$('pg-'+t))t='pre'; go(t);
 }
-let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{renderReasons('buy');renderReasons('sell');calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView();if($('pg-note').style.display!=='none')renderNotes()},30)}
+let rT; function refresh(){clearTimeout(rT);rT=setTimeout(()=>{['buy','sell','bmiss','smiss'].forEach(k=>renderReasons(k));calcBuy();calcSell();renderSellHolds();if($('pg-view').style.display!=='none')renderView();if($('pg-note').style.display!=='none')renderNotes()},30)}
 
 // 寫入：買賣紀錄 + 排入新聞佇列
 function saveRec(k,o){
@@ -531,7 +575,7 @@ function compute(extraSell){
     const open=ls.filter(l=>l.left>0);if(!open.length)return;
     const shares=open.reduce((a,l)=>a+l.left,0);
     const cost=open.reduce((a,l)=>a+(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares,0);
-    const cp=PRICES.p[code];let upl=null;
+    const cp=px(code);let upl=null;
     if(cp!=null){const amt=cp*shares;upl=amt-fee(amt)-tax(code,amt,false)-cost}
     holds.push({code,shares,cost,lots:open,cp,upl,pct:upl!=null&&cost?upl/cost*100:null});
   });
@@ -546,7 +590,7 @@ function go(p,url){
   document.body.classList.toggle('embedded',p==='pre'||p==='k');
   CUR_TAB=p;setHead(p);
   if(p==='pre'||p==='k'){const f=$('fr-'+p);if(url)f.src=url;else if(!f.getAttribute('src'))f.src=f.dataset.src;fitFrames();}
-  else if(p==='view')renderView();else if(p==='note')renderNotes();else renderSellHolds();
+  else if(p==='view'){renderView();liveTick(true)}else if(p==='note')renderNotes();else{renderSellHolds();liveTick(true)}
   try{localStorage.setItem('app-tab',p)}catch(e){}
   window.scrollTo(0,0);
 }
@@ -575,7 +619,7 @@ function setMode(m){
   mode=m;const s=$('segBS');s.className='seg '+m;
   s.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===m));
   $('buyForm').style.display=m==='buy'?'':'none';$('sellForm').style.display=m==='sell'?'':'none';
-  if(m==='sell')renderSellHolds();
+  if(m==='sell'){renderSellHolds();liveTick(true)}
 }
 function setUnit(w,u){
   if(w==='b')unitB=u;else unitS=u;
@@ -610,13 +654,13 @@ function renderReasons(k,boxId,sel){
   if(!box)return;
   box.innerHTML=L.map((t,i)=>ed
     ?`<button class="chip edit" onclick="renRs('${k}',${i})">${esc(t)}<span class="x" onclick="event.stopPropagation();delRs('${k}',${i})">✕</span></button>`
-    :`<button class="chip ${S.has(t)?'on':''}" onclick="togRs('${k}',${i},${sel?'true':'false'})">${esc(t)}</button>`).join('')+
+    :`<button class="chip ${S.has(t)?'on':''}${/miss/.test(k)?' miss':''}" onclick="togRs('${k}',${i},${sel?'true':'false'})">${esc(t)}</button>`).join('')+
     (ed?`<button class="chip add" onclick="addRs('${k}')">＋ 新增</button>`:'');
-  if(!sel)$('edBtn-'+k).textContent=ed?'✓ 完成':'✎ 編輯按鈕';
+  if(!sel&&$('edBtn-'+k))$('edBtn-'+k).textContent=ed?'✓ 完成':'✎ 編輯按鈕';
 }
-function togRs(k,i,inEdit){const t=DB.set.reasons[k][i],S=inEdit?EDIT.rs:rsSel[k];S.has(t)?S.delete(t):S.add(t);inEdit?renderReasons(k,'ed-rs',EDIT.rs):renderReasons(k)}
+function togRs(k,i,inEdit){const t=DB.set.reasons[k][i],S=inEdit?EDIT.sets[k]:rsSel[k];S.has(t)?S.delete(t):S.add(t);inEdit?renderReasons(k,'ed-rs-'+k,S):renderReasons(k)}
 function toggleRsEdit(k){rsEdit[k]=!rsEdit[k];renderReasons(k)}
-function addRs(k){askIn('新增'+(k==='buy'?'買進':'賣出')+'原因','',v=>{if(!DB.set.reasons[k].includes(v))DB.set.reasons[k].push(v);persistSet();renderReasons(k)})}
+function addRs(k){askIn('新增'+RS_LABEL[k],'',v=>{if(!DB.set.reasons[k].includes(v))DB.set.reasons[k].push(v);persistSet();renderReasons(k)})}
 function renRs(k,i){const old=DB.set.reasons[k][i];askIn('修改按鈕文字',old,v=>{DB.set.reasons[k][i]=v;if(rsSel[k].delete(old))rsSel[k].add(v);persistSet();renderReasons(k)})}
 function delRs(k,i){const t=DB.set.reasons[k][i];DB.set.reasons[k].splice(i,1);rsSel[k].delete(t);persistSet();renderReasons(k);toast('已移除「'+t+'」（舊紀錄不受影響）')}
 
@@ -651,8 +695,32 @@ function renderSellHolds(){
   if(!holds.length){H.innerHTML='<div class="empty">目前沒有持股</div>';return}
   H.innerHTML=holds.map(h=>`<div class="hold ${pickedSell===h.code?'on':''}" onclick="pickSell('${h.code}')">
     <div class="t"><span>${h.code} ${esc(info(h.code).name)}</span><span>${qtyTxt(h.shares)}</span></div>
-    <div class="s">持有成本 ${fmt(h.cost)}・共 ${h.lots.length} 批${h.cp!=null?'・收盤 '+fmtP(h.cp):''}</div></div>`).join('');
+    <div class="s">持有成本 ${fmt(h.cost)}・共 ${h.lots.length} 批${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div>${slHtml(h)}</div>`).join('');
 }
+const cpName=code=>LIVE[code]&&window.RT&&RT.stockLive()?'現價':'收盤';
+// 持股卡片上的停損／停利（取最近一批有設定的值；各批不同時註明）
+function slHtml(h){
+  const ls=[...h.lots].reverse(),st=(ls.find(l=>l.buy.stop)||{buy:{}}).buy.stop,tg=(ls.find(l=>l.buy.target)||{buy:{}}).buy.target;
+  if(!st&&!tg)return `<div class="slbar"><div class="sl none">尚未設定停損／停利<button class="lnk" onclick="event.stopPropagation();openEdit('b','${ls[0].buy.id}')">設定</button></div></div>`;
+  const diff=new Set(h.lots.map(l=>(l.buy.stop||'')+'|'+(l.buy.target||''))).size>1;
+  const d=v=>h.cp?`距 ${v>=h.cp?'+':''}${((v/h.cp-1)*100).toFixed(1)}%`:'';
+  const hs=st&&h.cp!=null&&h.cp<=st,ht=tg&&h.cp!=null&&h.cp>=tg;
+  return `<div class="slbar">
+    <div class="sl stop${hs?' hit':''}"><span>停損</span><b>${st?fmtP(st):'-'}</b><small>${hs?'⚠️ 已跌破':st?d(st):''}</small></div>
+    <div class="sl tgt${ht?' hit':''}"><span>停利</span><b>${tg?fmtP(tg):'-'}</b><small>${ht?'🎯 已達到':tg?d(tg):''}</small></div></div>${diff?'<div class="slnote">各批設定不同，顯示最近一批；各批明細在「買進明細」</div>':''}`;
+}
+// 已實現卡片：買進原因、賣出原因、買進失誤、賣出失誤、檢討
+function whyHtml(r){
+  const s=r.sell,seen=new Set(),bt=r.matches.map(m=>rtxt(m.buy)).filter(t=>t&&!seen.has(t)&&seen.add(t)).join('／');
+  const L=[];
+  if(bt)L.push(`<span>買進原因：</span>${esc(bt)}`);
+  if(rtxt(s))L.push(`<span>賣出原因：</span>${esc(rtxt(s))}`);
+  L.push(`<span class="miss">❌ 買進失誤：</span>${s.bmiss&&s.bmiss.length?esc(s.bmiss.join('、')):'<span>無</span>'}`);
+  L.push(`<span class="miss">❌ 賣出失誤：</span>${s.smiss&&s.smiss.length?esc(s.smiss.join('、')):'<span>無</span>'}`);
+  if(s.review)L.push(`<span>檢討：</span>${esc(s.review)}`);
+  return `<div class="why">${L.join('<br>')}</div>`;
+}
+const missTxt=o=>[...(o.bmiss||[]),...(o.smiss||[])];
 function pickSell(code){
   pickedSell=code;const h=compute().holds.find(x=>x.code===code);
   renderSellHolds();
@@ -681,10 +749,11 @@ function saveSell(){
   const r=previewSell();if(!r)return toast('請填價格與數量');if(r.short>0)return toast('數量超過持股');
   if(!rsSel.sell.size&&!$('sReason').value.trim())return toast('請選擇賣出原因');
   const o={id:uid8(),code:pickedSell,date:r.sell.date,price:r.sell.price,shares:r.sell.shares,daytrade:r.sell.daytrade,
-    reasons:[...rsSel.sell],reason:$('sReason').value.trim(),review:$('sReview').value.trim(),mktNote:$('sMktNote').value.trim(),created:Date.now()};
+    reasons:[...rsSel.sell],reason:$('sReason').value.trim(),bmiss:[...rsSel.bmiss],smiss:[...rsSel.smiss],
+    review:$('sReview').value.trim(),mktNote:$('sMktNote').value.trim(),created:Date.now()};
   saveRec('s',o);toast((r.pl>=0?'賺 ':'賠 ')+fmt(Math.abs(r.pl))+' 元，已記錄');
   ['sPrice','sQty','sReason','sReview','sMktNote'].forEach(i=>$(i).value='');$('sDay').checked=false;
-  rsSel.sell.clear();rsEdit.sell=false;renderReasons('sell');
+  ['sell','bmiss','smiss'].forEach(k=>{rsSel[k].clear();rsEdit[k]=false;renderReasons(k)});
   pickedSell=null;renderSellHolds();calcSell();window.scrollTo(0,0);
 }
 
@@ -726,7 +795,7 @@ const RLABEL={day:'本日',week:'本週',month:'本月',year:'今年',all:''};
 function inRange(d){const f=$('fFrom').value,t=$('fTo').value,x=d.slice(0,10);return (!f||x>=f)&&(!t||x<=t)}
 function renderView(){
   const {holds,realized}=compute(),pf=$('fPL').value;
-  const R=realized.filter(r=>matchQ(r.sell.code,[rtxt(r.sell),r.sell.review,r.sell.mktNote,...newsTxt(r.sell),...r.matches.map(m=>rtxt(m.buy))])&&inRange(r.sell.date)
+  const R=realized.filter(r=>matchQ(r.sell.code,[rtxt(r.sell),...missTxt(r.sell),r.sell.review,r.sell.mktNote,...newsTxt(r.sell),...r.matches.map(m=>rtxt(m.buy))])&&inRange(r.sell.date)
      &&(!pf||(pf==='win'?r.pl>0:r.pl<0)));
   const H=holds.filter(h=>matchQ(h.code,h.lots.map(l=>rtxt(l.buy)))&&h.lots.some(l=>inRange(l.buy.date))&&(!pf||(h.upl!=null&&(pf==='win'?h.upl>0:h.upl<0))));
   const tot=R.reduce((a,r)=>a+r.pl,0),wins=R.filter(r=>r.pl>0).length;
@@ -735,14 +804,15 @@ function renderView(){
   const best=R.length?R.reduce((a,b)=>b.pl>a.pl?b:a):null,worst=R.length?R.reduce((a,b)=>b.pl<a.pl?b:a):null;
   $('stats').innerHTML=`
    <div class="stat"><div class="k">${(RLABEL[(document.querySelector('#rangeBtns .on')||{}).dataset?.r]||(($('fFrom').value||$('fTo').value)?'區間':''))}已實現損益</div><div class="v ${cls(tot)}">${sgn(tot)}</div><div class="x">${R.length} 筆賣出</div></div>
-   <div class="stat"><div class="k">未實現損益</div><div class="v ${cls(upl)}">${sgn(upl)}</div><div class="x">${PRICES.date?'依 '+PRICES.date.slice(5).replace('-','/')+' 收盤價':'尚無收盤價'}</div></div>
+   <div class="stat"><div class="k">未實現損益</div><div class="v ${cls(upl)}">${sgn(upl)}</div><div class="x">${pxLbl()}</div></div>
    <div class="stat"><div class="k">勝率</div><div class="v">${R.length?Math.round(wins/R.length*100):0}%</div><div class="x">${wins} 賺 / ${R.length-wins} 賠</div></div>
    <div class="stat"><div class="k">平均持有</div><div class="v">${Math.round(avgD)} 天</div><div class="x">${best&&best.pl>0?'最賺 '+esc(info(best.sell.code).name)+' '+sgn(best.pl):''}${worst&&worst.pl<0?'<br>最賠 '+esc(info(worst.sell.code).name)+' '+sgn(worst.pl):''}</div></div>`;
   const V=$('viewList');
   if(view==='hold'){
     V.innerHTML=H.length?H.map(h=>`<div class="item">
-      <div class="h"><div><div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・成本 ${fmt(h.cost)}${h.cp!=null?'・收盤 '+fmtP(h.cp):''}</div></div>
+      <div class="h"><div><div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・成本 ${fmt(h.cost)}${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div></div>
       <div>${h.upl!=null?`<div class="pl ${cls(h.upl)}">${sgn(h.upl)}</div><div class="pct ${cls(h.upl)}">${h.pct.toFixed(2)}%</div>`:'<div class="meta">無收盤價</div>'}</div></div>
+      ${slHtml(h)}
       <div class="expand" onclick="tog(this)">▾ ${h.lots.length} 批買進明細</div>
       <div class="lots" style="display:none">${h.lots.map(l=>{const c=(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares;let lp=null;if(h.cp!=null){const a=h.cp*l.left;lp=a-fee(a)-tax(h.code,a,false)-c}
         return `<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(l.buy.date)} @${fmtP(l.buy.price)}・剩 ${qtyTxt(l.left)}・${days(l.buy.date,new Date())}天</span>${lp!=null?`<span class="${cls(lp)}">${sgn(lp)}</span>`:''}</div>
@@ -754,7 +824,7 @@ function renderView(){
     V.innerHTML=R.length?[...R].reverse().map(r=>`<div class="item">
       <div class="h"><div><div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}</div><div class="meta">${dt(r.sell.date)} 賣 @${fmtP(r.sell.price)}・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div></div>
       <div><div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div><div class="pct ${cls(r.pl)}">${r.pct.toFixed(2)}%</div></div></div>
-      ${rtxt(r.sell)||r.sell.review?`<div class="why">${rtxt(r.sell)?`<span>賣出原因：</span>${esc(rtxt(r.sell))}`:''}${r.sell.review?`<br><span>檢討：</span>${esc(r.sell.review)}`:''}</div>`:''}
+      ${whyHtml(r)}
       ${mktHtml(r.sell)}
       <div class="expand" onclick="tog(this)">▾ 對應的買進批次（先進先出）</div>
       <div class="lots" style="display:none">${r.matches.map(m=>`<div class="lot" style="flex-direction:column"><div style="display:flex;justify-content:space-between;gap:8px"><span>${dt(m.buy.date)} 買 @${fmtP(m.buy.price)}・${qtyTxt(m.shares)}・持有${m.days}天</span><span class="${cls(m.pl)}">${sgn(m.pl)}</span></div>${rtxt(m.buy)?`<div style="color:var(--ink);margin-top:3px">💬 ${esc(rtxt(m.buy))}</div>`:''}</div>`).join('')}
@@ -763,13 +833,13 @@ function renderView(){
   }else{
     const rmap=Object.fromEntries(realized.map(r=>[r.sell.id,r]));
     const list=[...DB.buys.map(b=>({k:'b',o:b})),...DB.sells.map(s=>({k:'s',o:s}))]
-      .filter(e=>matchQ(e.o.code,[rtxt(e.o),e.o.review,e.o.mktNote,...newsTxt(e.o)])&&inRange(e.o.date)&&(!pf||(e.k==='s'&&rmap[e.o.id]&&(pf==='win'?rmap[e.o.id].pl>0:rmap[e.o.id].pl<0))))
+      .filter(e=>matchQ(e.o.code,[rtxt(e.o),...missTxt(e.o),e.o.review,e.o.mktNote,...newsTxt(e.o)])&&inRange(e.o.date)&&(!pf||(e.k==='s'&&rmap[e.o.id]&&(pf==='win'?rmap[e.o.id].pl>0:rmap[e.o.id].pl<0))))
       .sort((a,b)=>a.o.date<b.o.date?1:-1);
     V.innerHTML=list.length?list.map(e=>{const o=e.o,r=rmap[o.id];return `<div class="item">
       <div class="h"><div><div class="nm"><span class="pill ${e.k}">${e.k==='b'?'買':'賣'}</span>${o.code} ${esc(info(o.code).name)}</div>
       <div class="meta">${dt(o.date)}・@${fmtP(o.price)}・${qtyTxt(o.shares)}</div></div>
       ${r?`<div class="pl ${cls(r.pl)}">${sgn(r.pl)}</div>`:`<div class="meta">${fmt(o.price*o.shares+fee(o.price*o.shares))}</div>`}</div>
-      ${rtxt(o)?`<div class="why"><span>${e.k==='b'?'買進原因：':'賣出原因：'}</span>${esc(rtxt(o))}${o.review?`<br><span>檢討：</span>${esc(o.review)}`:''}</div>`:''}
+      ${rtxt(o)?`<div class="why"><span>${e.k==='b'?'買進原因：':'賣出原因：'}</span>${esc(rtxt(o))}${o.bmiss&&o.bmiss.length?`<br><span class="miss">❌ 買進失誤：</span>${esc(o.bmiss.join('、'))}`:''}${o.smiss&&o.smiss.length?`<br><span class="miss">❌ 賣出失誤：</span>${esc(o.smiss.join('、'))}`:''}${o.review?`<br><span>檢討：</span>${esc(o.review)}`:''}</div>`:''}
       ${mktHtml(o)}
       <div class="acts"><button onclick="openEdit('${e.k}','${o.id}')">✎ 修改</button><button onclick="askDel('${e.k}','${o.id}')">刪除</button></div></div>`}).join(''):'<div class="empty">'+(DB.buys.length?'沒有符合的紀錄':'還沒有任何紀錄，先到「買賣」新增一筆買進吧')+'</div>';
   }
@@ -780,28 +850,30 @@ let EDIT=null;
 function openEdit(k,id){
   const o=(k==='b'?DB.buys:DB.sells).find(x=>x.id===id);if(!o)return;
   const rk=k==='b'?'buy':'sell';
-  EDIT={k,id,o,rs:new Set(o.reasons||[])};
+  EDIT={k,id,o,sets:{[rk]:new Set(o.reasons||[]),bmiss:new Set(o.bmiss||[]),smiss:new Set(o.smiss||[])}};
   $('editSheet').innerHTML=`<h3>修改${k==='b'?'買進':'賣出'}：${o.code} ${esc(info(o.code).name)}</h3>
    <label class="f">時間</label><input type="datetime-local" id="ed-date" value="${o.date}">
    <div class="row"><div><label class="f">成交價</label><input type="number" inputmode="decimal" step="0.01" id="ed-price" value="${o.price}"></div>
    <div><label class="f">股數（1 張 = 1000 股）</label><input type="number" inputmode="numeric" id="ed-shares" value="${o.shares}"></div></div>
    ${k==='s'?`<label class="f" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="ed-day" style="width:auto" ${o.daytrade?'checked':''}> 當日沖銷</label>`:''}
-   <label class="f">${k==='b'?'買進':'賣出'}原因</label><div class="chips" id="ed-rs"></div>
+   <label class="f">${k==='b'?'買進':'賣出'}原因</label><div class="chips" id="ed-rs-${rk}"></div>
    <input id="ed-reason" placeholder="補充說明（選填）" style="margin-top:8px" value="${esc(o.reason||'')}">
    ${k==='b'?`<div class="row"><div><label class="f">停損價</label><input type="number" inputmode="decimal" id="ed-stop" value="${o.stop||''}"></div><div><label class="f">停利價</label><input type="number" inputmode="decimal" id="ed-target" value="${o.target||''}"></div></div>`
-   :`<label class="f">檢討／學到什麼</label><textarea id="ed-review">${esc(o.review||'')}</textarea>
+   :`<label class="f">買進失誤</label><div class="chips" id="ed-rs-bmiss"></div>
+     <label class="f">賣出失誤</label><div class="chips" id="ed-rs-smiss"></div>
+     <label class="f">檢討／學到什麼</label><textarea id="ed-review">${esc(o.review||'')}</textarea>
      <label class="f">盤勢／新聞補充</label><input id="ed-mkt" value="${esc(o.mktNote||'')}">`}
    <div class="row"><button class="btn ghost" onclick="closeEdit()">取消</button><button class="btn" onclick="saveEdit()">儲存</button></div>`;
-  renderReasons(rk,'ed-rs',EDIT.rs);
+  Object.entries(EDIT.sets).forEach(([x,S])=>{if($('ed-rs-'+x))renderReasons(x,'ed-rs-'+x,S)});
   $('editBg').style.display='block';$('editSheet').style.display='block';
 }
 function closeEdit(){$('editBg').style.display='none';$('editSheet').style.display='none';EDIT=null}
 function saveEdit(){
   const {k,o}=EDIT,n={...o,date:$('ed-date').value||o.date,price:+$('ed-price').value,shares:Math.round(+$('ed-shares').value),
-    reasons:[...EDIT.rs],reason:$('ed-reason').value.trim()};
+    reasons:[...EDIT.sets[k==='b'?'buy':'sell']],reason:$('ed-reason').value.trim()};
   if(!n.price||!n.shares)return toast('價格與股數不可空白');
   if(k==='b'){n.stop=+$('ed-stop').value||null;n.target=+$('ed-target').value||null}
-  else{n.daytrade=$('ed-day').checked;n.review=$('ed-review').value.trim();n.mktNote=$('ed-mkt').value.trim()}
+  else{n.daytrade=$('ed-day').checked;n.review=$('ed-review').value.trim();n.bmiss=[...EDIT.sets.bmiss];n.smiss=[...EDIT.sets.smiss];n.mktNote=$('ed-mkt').value.trim()}
   // 檢查修改後所有賣出是否仍有足夠持股
   const arr=k==='b'?DB.buys:DB.sells,i=arr.indexOf(o);arr[i]=n;
   const bad=compute().realized.find(r=>r.short>0);arr[i]=o;
