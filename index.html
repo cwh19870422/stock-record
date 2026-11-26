@@ -242,7 +242,7 @@ nav button.on{color:var(--accent);font-weight:700}
           </div>
         </div>
 
-        <div class="lblrow"><label class="f">買進原因（可複選）</label><button class="lnk" id="edBtn-buy" onclick="toggleRsEdit('buy')">✎ 編輯按鈕</button></div>
+        <div class="lblrow"><label class="f">買進原因（選填・可複選）</label><button class="lnk" id="edBtn-buy" onclick="toggleRsEdit('buy')">✎ 編輯按鈕</button></div>
         <div class="chips" id="rs-buy"></div>
         <input id="bReason" placeholder="補充說明（選填）" style="margin-top:8px">
 
@@ -678,7 +678,6 @@ function calcBuy(){
 function saveBuy(){
   const p=+$('bPrice').value,q=Math.round(+$('bQty').value*unitB);
   if(!picked)return toast('請先選擇股票');if(!p||!q)return toast('請填價格與數量');
-  if(!rsSel.buy.size&&!$('bReason').value.trim())return toast('請選擇買進原因');
   const o={id:uid8(),code:picked,date:$('bDate').value||nowLocal(),price:p,shares:q,reasons:[...rsSel.buy],reason:$('bReason').value.trim(),
     stop:+$('bStop').value||null,target:+$('bTarget').value||null,created:Date.now()};
   saveRec('b',o);toast('已記錄買進 '+info(picked).name);
