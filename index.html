@@ -811,8 +811,8 @@ function renderView(){
   const V=$('viewList');
   if(view==='hold'){
     V.innerHTML=H.length?H.map(h=>`<div class="item">
-      <div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・均價 ${fmtP(+(h.cost/h.shares).toFixed(2))}${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div>
-      <div class="cpl"><div><span>成本</span><b>${fmt(h.cost)}</b></div><div style="text-align:right">${h.upl!=null?`<span>損益 ${h.pct.toFixed(2)}%</span><b class="${cls(h.upl)}">${sgn(h.upl)}</b>`:'<span>損益</span><b style="color:var(--sub);font-size:15px">無收盤價</b>'}</div></div>
+      <div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・總成本 ${fmt(h.cost)}${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div>
+      <div class="cpl"><div><span>${new Set(h.lots.map(l=>l.buy.price)).size>1?'買進均價':'買進價'}</span><b>${fmtP(+(h.lots.reduce((a,l)=>a+l.buy.price*l.left,0)/h.shares).toFixed(2))}</b></div><div style="text-align:right">${h.upl!=null?`<span>損益 ${h.pct.toFixed(2)}%</span><b class="${cls(h.upl)}">${sgn(h.upl)}</b>`:'<span>損益</span><b style="color:var(--sub);font-size:15px">無收盤價</b>'}</div></div>
       ${slHtml(h)}
       <div class="expand" onclick="tog(this)">▾ ${h.lots.length} 批買進明細</div>
       <div class="lots" style="display:none">${h.lots.map(l=>{const c=(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares;let lp=null;if(h.cp!=null){const a=h.cp*l.left;lp=a-fee(a)-tax(h.code,a,false)-c}
