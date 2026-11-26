@@ -62,6 +62,8 @@ textarea{min-height:64px;resize:vertical}
 .sl.none{background:#f4f6fa;color:var(--sub);display:flex;justify-content:space-between;align-items:center}
 .hold .slbar{margin-top:8px}.hold .sl{padding:5px 8px}.hold .sl b{font-size:15px}
 .item .why .miss{color:#b5651d;font-weight:600}
+.cpl{display:flex;justify-content:space-between;gap:10px;margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.cpl span{display:block;font-size:12px;color:var(--sub)}.cpl b{font-size:22px;font-weight:700;white-space:nowrap}
 .chip.edit{padding-right:6px}.chip.edit .x{display:inline-block;margin-left:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f1d6d6;color:var(--up);font-size:12px}
 .lblrow{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}.lblrow label.f{margin:0}
 .lnk{border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0}
@@ -809,8 +811,8 @@ function renderView(){
   const V=$('viewList');
   if(view==='hold'){
     V.innerHTML=H.length?H.map(h=>`<div class="item">
-      <div class="h"><div><div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・成本 ${fmt(h.cost)}${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div></div>
-      <div>${h.upl!=null?`<div class="pl ${cls(h.upl)}">${sgn(h.upl)}</div><div class="pct ${cls(h.upl)}">${h.pct.toFixed(2)}%</div>`:'<div class="meta">無收盤價</div>'}</div></div>
+      <div class="nm">${h.code} ${esc(info(h.code).name)}</div><div class="meta">${qtyTxt(h.shares)}・均價 ${fmtP(+(h.cost/h.shares).toFixed(2))}${h.cp!=null?'・'+cpName(h.code)+' '+fmtP(h.cp):''}</div>
+      <div class="cpl"><div><span>成本</span><b>${fmt(h.cost)}</b></div><div style="text-align:right">${h.upl!=null?`<span>損益 ${h.pct.toFixed(2)}%</span><b class="${cls(h.upl)}">${sgn(h.upl)}</b>`:'<span>損益</span><b style="color:var(--sub);font-size:15px">無收盤價</b>'}</div></div>
       ${slHtml(h)}
       <div class="expand" onclick="tog(this)">▾ ${h.lots.length} 批買進明細</div>
       <div class="lots" style="display:none">${h.lots.map(l=>{const c=(l.buy.price*l.buy.shares+l.buy.fee)*l.left/l.buy.shares;let lp=null;if(h.cp!=null){const a=h.cp*l.left;lp=a-fee(a)-tax(h.code,a,false)-c}
