@@ -111,6 +111,7 @@ details.more summary{font-size:13px;color:var(--accent);cursor:pointer;padding:4
 .lots{margin-top:6px}
 .rg{display:flex;gap:6px;overflow-x:auto}.rg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 0;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;min-width:52px}.rg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .qd{display:flex;gap:6px;margin-top:6px}.qd button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px;color:var(--accent);cursor:pointer}
+.hdays{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent2);border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:2px;white-space:nowrap}
 .acts{display:flex;gap:16px;margin-top:8px}
 .acts button{border:0;background:none;color:#9aa1af;font-size:12px;cursor:pointer;padding:0}
 .empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
@@ -868,6 +869,12 @@ function setRange(r){
 function markRange(r){document.querySelectorAll('#rangeBtns button').forEach(b=>b.classList.toggle('on',b.dataset.r===r))}
 const RLABEL={day:'本日',week:'本週',month:'本月',year:'今年',all:''};
 function inRange(d){const f=$('fFrom').value,t=$('fTo').value,x=d.slice(0,10);return (!f||x>=f)&&(!t||x<=t)}
+// 已實現：持股天數（多批買進時顯示最短～最長）
+function holdDays(r){
+  const ds=r.matches.map(m=>m.days);if(!ds.length)return'';
+  const a=Math.min(...ds),b=Math.max(...ds),t=x=>x===0?'當天':x+' 天';
+  return ` <span class="hdays">持有 ${a===b?t(a):a+'～'+b+' 天'}</span>`;
+}
 function renderView(){
   const {holds,realized}=compute(),pf=$('fPL').value;
   const R=realized.filter(r=>matchQ(r.sell.code,[rtxt(r.sell),...missTxt(r.sell),r.sell.review,r.sell.mktNote,...newsTxt(r.sell),...r.matches.map(m=>rtxt(m.buy))])&&inRange(r.sell.date)
@@ -897,7 +904,7 @@ function renderView(){
         <div class="acts"><button onclick="openEdit('b','${l.buy.id}')">✎ 修改</button><button onclick="askDel('b','${l.buy.id}')">刪除</button></div></div>`}).join('')}</div></div>`).join(''):'<div class="empty">沒有符合的持股</div>';
   }else if(view==='real'){
     V.innerHTML=R.length?[...R].reverse().map(r=>`<div class="item">
-      <div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}</div><div class="meta">${dt(r.sell.date)} 賣・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div>
+      <div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}${holdDays(r)}</div><div class="meta">${dt(r.sell.date)} 賣・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div>
       ${realPx(r)}
       ${whyHtml(r)}
       ${realMkt(r)}
