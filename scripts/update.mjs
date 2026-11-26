@@ -105,6 +105,35 @@ async function news(q, date, n) {
   }).filter(x => x.t && !seen.has(x.t) && seen.add(x.t)).slice(0, n);
 }
 
+
+// ---------- 3b. 交易當日走勢（分鐘資料，寫回 Firebase）----------
+// 格式：{y:昨收, t:[距 09:00 分鐘數], p:[價格]}；抓不到時存 {e:1}
+const tpe = (date, hm) => Date.parse(`${date}T${hm}:00+08:00`) / 1000;
+async function ticksYahoo(sym, date) {
+  for (const iv of ['1m', '2m', '5m']) {
+    try {
+      const j = await getJSON(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${iv}&period1=${tpe(date, '08:59')}&period2=${tpe(date, '13:40')}&includePrePost=false`);
+      const r = j.chart?.result?.[0], ts = r?.timestamp || [], cl = r?.indicators?.quote?.[0]?.close || [];
+      const t = [], p = [];
+      ts.forEach((x, i) => { const m = Math.round((x - tpe(date, '09:00')) / 60); if (cl[i] != null && m >= 0 && m <= 275) { t.push(m); p.push(+cl[i].toFixed(2)); } });
+      if (p.length > 5) return { y: r.meta?.chartPreviousClose ?? r.meta?.previousClose ?? null, t, p, iv };
+    } catch (e) { console.log('⚠️ 走勢', sym, date, iv, e.message); }
+  }
+  return null;
+}
+async function ticksIndex(date) {
+  try { // 證交所每 5 秒加權指數，取每分鐘一點
+    const j = await getJSON(`https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_INDEX?date=${date.replace(/-/g, '')}&response=json`);
+    const t = [], p = [];
+    (j.data || []).forEach(r => { const [h, m, sec] = String(r[0]).split(':').map(Number); if (sec !== 0) return; const v = num(r[1]); if (v > 0) { t.push((h - 9) * 60 + m); p.push(v); } });
+    if (p.length > 5) {
+      const mk = readJSON('data/market.json', {}), prev = Object.keys(mk).filter(k => k < date).sort().pop();
+      return { y: prev ? mk[prev].c : null, t, p, iv: '1m' };
+    }
+  } catch (e) { console.log('⚠️ 大盤走勢', date, e.message); }
+  return ticksYahoo('^TWII', date);
+}
+
 async function updateNews() {
   const cfg = readJSON('config.json', {});
   const key = cfg.firebase?.apiKey, pid = cfg.firebase?.projectId, email = cfg.botEmail, pw = process.env.BOT_PASSWORD;
@@ -122,6 +151,7 @@ async function updateNews() {
     method: 'PATCH', headers: H,
     body: JSON.stringify({ fields: { json: { stringValue: JSON.stringify(items) }, date: { stringValue: date } } }),
   });
+  const MKTOF = new Map(readJSON('data/stocks.json', []).map(x => [x[0], x[3]]));
   const exists = async id => (await fetch(`${base}/auto/${id}`, { headers: H })).ok;
   let n = 0;
   for (const d of docs) {
@@ -129,8 +159,17 @@ async function updateNews() {
     if (!code || !date) continue;
     if (date > today || (date === today && hour < 16)) continue; // 當天等收盤後再抓
     try {
-      await put(`news_${date}_${code}`, await news(name || code, date, 5), date);
+      if (!(await exists(`news_${date}_${code}`))) await put(`news_${date}_${code}`, await news(name || code, date, 5), date);
       if (!(await exists(`news_${date}_MKT`))) await put(`news_${date}_MKT`, await news('台股 大盤', date, 3), date);
+      const m = MKTOF.get(code);
+      if (m !== '興' && !(await exists(`tick_${date}_${code}`))) {
+        const x = await ticksYahoo(`${code}.${m === '櫃' ? 'TWO' : 'TW'}`, date);
+        await put(`tick_${date}_${code}`, x || { e: 1 }, date); console.log(`走勢 ${code} ${date}：${x ? x.p.length + ' 點（' + x.iv + '）' : '無資料'}`);
+      }
+      if (!(await exists(`tick_${date}_MKT`))) {
+        const x = await ticksIndex(date);
+        await put(`tick_${date}_MKT`, x || { e: 1 }, date); console.log(`大盤走勢 ${date}：${x ? x.p.length + ' 點' : '無資料'}`);
+      }
       await fetch(`https://firestore.googleapis.com/v1/${d.name}`, { method: 'DELETE', headers: H });
       n++;
       await new Promise(r => setTimeout(r, 800));
@@ -139,7 +178,14 @@ async function updateNews() {
   console.log(`新聞：處理 ${n} 筆，佇列共 ${docs.length} 筆`);
 }
 
+// 走勢資料來源自我檢查（只印紀錄）
+async function probeTicks() {
+  const mk = readJSON('data/market.json', {}), d = Object.keys(mk).sort().pop();
+  if (!d) return;
+  const a = await ticksYahoo('2330.TW', d), b = await ticksIndex(d);
+  console.log(`走勢來源檢查 ${d}：個股 ${a ? a.p.length + ' 點（' + a.iv + '）' : '失敗'}，大盤 ${b ? b.p.length + ' 點' : '失敗'}`);
+}
 fs.mkdirSync('data', { recursive: true });
-for (const [name, fn] of [['股票', updateStocks], ['大盤', updateMarket], ['補大盤', backfillMarket],['新聞', updateNews]]) {
+for (const [name, fn] of [['股票', updateStocks], ['大盤', updateMarket], ['補大盤', backfillMarket],['新聞', updateNews], ['走勢檢查', probeTicks]]) {
   try { await fn(); } catch (e) { console.log(`⚠️ ${name}更新失敗：`, e.message); }
 }
