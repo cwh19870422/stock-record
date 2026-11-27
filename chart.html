@@ -82,7 +82,7 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="srch"><input id="q" placeholder="查詢個股：輸入代號或名稱，例如 2330、長榮" autocomplete="off" enterkeyhint="search"><button id="go">查詢</button><div class="sug" id="sug"></div></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg" style="white-space:nowrap"></span><span id="live" style="font-size:12px"></span></div>
   <div class="per" id="per"><button data-p="d" class="on">日K</button><button data-p="w">週K</button><button data-p="m">月K</button><span class="act"><button id="simBtn" style="display:none">🔍 找相似走勢</button><button id="star" style="display:none">☆ 加入自選</button></span></div>
   <div class="info" id="info">載入中…</div>
   <div class="tg" id="tg">
@@ -335,7 +335,7 @@ async function show(id, keep = false, perChange = false) {
   const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
   $('#name').textContent = it.name; drawStar();
   $('#close').innerHTML = `<span class="${cl}">${fmt(C[i])}</span>`;
-  $('#chg').innerHTML = `<span class="${cl}">${ch >= 0 ? '▲' : '▼'}${fmt(Math.abs(ch))}（${p.toFixed(2)}%）</span> <span class="mut" style="font-size:12px">${T[i]}</span>`;
+  $('#chg').innerHTML = `<span class="${cl}">${ch >= 0 ? '▲' : '▼'}${fmt(Math.abs(ch))}（${p.toFixed(2)}%）</span>`;
   const info = j => {
     const c = B[j], pc = j ? B[j - 1][4] : c[1], d = c[4] - pc, dp = pc ? d / pc * 100 : 0, dc = sgnC(d);
     const cc = v => v > pc ? 'up' : v < pc ? 'dn' : '';
