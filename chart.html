@@ -31,13 +31,16 @@ main{max-width:900px;margin:0 auto;padding:10px}
 .pane .lbl{position:absolute;left:10px;top:4px;z-index:2;font-size:11px;color:var(--mut);pointer-events:none}
 .pane .lbl i{font-style:normal;margin-right:6px}
 #main{height:270px}
-.per{display:flex;gap:22px;margin:8px 4px 0}
+.per{display:flex;gap:16px;align-items:center;margin:8px 4px 0}
+.per .act{margin-left:auto;display:flex;gap:6px}
+.per .act button{border:1px solid #c9b48a;border-bottom:1px solid #c9b48a;border-radius:99px;background:#fdf9f1;padding:3px 9px;font-size:13px;font-weight:600;white-space:nowrap}
+#simBtn{color:#1f7fa8} #star{color:#c28a12}
 .per button{background:none;border:0;border-bottom:3px solid transparent;font-size:16px;font-weight:700;color:var(--mut);padding:2px 2px 4px;cursor:pointer}
 .per button.on{color:var(--tx);border-bottom-color:var(--acc)}
 .info{font-size:12.5px;color:var(--tx);line-height:1.55;letter-spacing:-.2px}
 .info .ma{font-weight:700}
 .mainp{padding:2px 2px 0}
-.tg{display:flex;gap:11px;overflow-x:auto;padding:4px 4px 10px;scrollbar-width:none;white-space:nowrap}
+.tg{display:flex;gap:11px;overflow-x:auto;padding:2px 4px 6px;scrollbar-width:none;white-space:nowrap}
 .tg::-webkit-scrollbar{display:none}
 .tg label{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:700;flex:none;cursor:pointer}
 .tg input{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:2px solid #b9a582;border-radius:4px;background:var(--card);margin:0;display:grid;place-content:center;cursor:pointer}
@@ -79,10 +82,9 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="srch"><input id="q" placeholder="查詢個股：輸入代號或名稱，例如 2330、長榮" autocomplete="off" enterkeyhint="search"><button id="go">查詢</button><div class="sug" id="sug"></div></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="simBtn" style="margin-left:auto;background:#fdf9f1;color:#1f7fa8;border:1px solid #8b6a42;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#fdf9f1;color:#c28a12;border:1px solid #c9b48a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
-  <div class="per" id="per"><button data-p="d" class="on">日K</button><button data-p="w">週K</button><button data-p="m">月K</button></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span></div>
+  <div class="per" id="per"><button data-p="d" class="on">日K</button><button data-p="w">週K</button><button data-p="m">月K</button><span class="act"><button id="simBtn" style="display:none">🔍 找相似走勢</button><button id="star" style="display:none">☆ 加入自選</button></span></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane mainp"><div id="main"></div><div id="wvOv"></div></div>
   <div class="tg" id="tg">
     <label><input type="checkbox" data-t="wv">頭底</label>
     <label><input type="checkbox" data-t="bb">布林通道</label>
@@ -91,6 +93,7 @@ details.box[open]>summary::before{content:'▼ '}
     <label><input type="checkbox" data-t="m20" checked>20日</label>
     <label><input type="checkbox" data-t="m60" checked>60日</label>
   </div>
+  <div class="pane mainp"><div id="main"></div><div id="wvOv"></div></div>
   <div class="ind" id="ind">
     <div class="ip"><div class="ih" id="h-vol"></div><div class="ic" id="c-vol"></div></div>
     <div class="ip"><div class="ih" id="h-kd"></div><div class="ic" id="c-kd"></div></div>
@@ -205,7 +208,7 @@ $('#tg').addEventListener('change', e => {
   applyTg(); if (cur) show(cur.id, true);
 });
 $('#per').onclick = e => {
-  const b = e.target.closest('button'); if (!b || b.dataset.p === PER) return;
+  const b = e.target.closest('button'); if (!b || !b.dataset.p || b.dataset.p === PER) return;
   PER = b.dataset.p; try { localStorage.setItem('k-per', PER); } catch {}
   if (cur) show(cur.id, false, true);
 };
@@ -339,7 +342,7 @@ async function show(id, keep = false, perChange = false) {
     const ma = ['m5', 'm10', 'm20', 'm60'].filter(k => TG[k])
       .map(k => `<span class="ma" style="color:${MAC[k]};white-space:nowrap">${k.slice(1)}MA ${fmt(MA[k][j])}${arw(MA[k][j], MA[k][j - 1])}</span>`).join(' ');
     const bb = TG.bb ? `<br><span class="ma" style="color:${BBC}">上軌 ${fmt(BB.u[j])}${arw(BB.u[j], BB.u[j - 1])}　中軌 ${fmt(BB.m[j])}${arw(BB.m[j], BB.m[j - 1])}　下軌 ${fmt(BB.l[j])}${arw(BB.l[j], BB.l[j - 1])}</span>` : '';
-    $('#info').innerHTML = `<b>${PER === 'm' ? c[0].slice(0, 7) : PER === 'w' ? c[0] + ' 週' : c[0]}</b>　開 <b class="${cc(c[1])}">${fmt(c[1])}</b>　高 <b class="${cc(c[2])}">${fmt(c[2])}</b>　低 <b class="${cc(c[3])}">${fmt(c[3])}</b>　收 <b class="${dc}">${fmt(c[4])}</b>　漲跌 <b class="${dc}">${d > 0 ? '+' : ''}${fmt(d)}（${d > 0 ? '+' : ''}${dp.toFixed(2)}%）</b>${ma ? '<br>' + ma : ''}${bb}`;
+    $('#info').innerHTML = `<b>${PER === 'm' ? c[0].slice(0, 7) : PER === 'w' ? c[0] + ' 週' : c[0]}</b>　開 <b class="${cc(c[1])}">${fmt(c[1])}</b>　高 <b class="${cc(c[2])}">${fmt(c[2])}</b>　低 <b class="${cc(c[3])}">${fmt(c[3])}</b>　收 <b class="${dc}">${fmt(c[4])}</b>${ma ? '<br>' + ma : ''}${bb}`;
     const pv = j ? V[j - 1] : null;
     $('#h-vol').innerHTML = `成交量 ${hasVol ? Math.round(V[j]).toLocaleString('zh-TW') : '—'}${hasVol ? arw(V[j], pv) : ''}`;
     $('#h-kd').innerHTML = `<span style="color:${KC}">K ${fmt(K.k[j], 2)}${arw(K.k[j], K.k[j - 1])}</span>　<span style="color:${DC}">D ${fmt(K.d[j], 2)}${arw(K.d[j], K.d[j - 1])}</span>`;
