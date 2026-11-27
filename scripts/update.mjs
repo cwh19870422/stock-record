@@ -1,3 +1,4 @@
+// 觸發更新 2026-11-27
 // 每日自動更新：股票清單、收盤價、加權指數、交易當日新聞
 // 由 GitHub Actions 執行（.github/workflows/daily-update.yml）
 import fs from 'node:fs';
