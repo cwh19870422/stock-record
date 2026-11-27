@@ -35,7 +35,25 @@ main{max-width:900px;margin:0 auto;padding:10px}
 .pane{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 4px 2px;margin-bottom:8px;position:relative}
 .pane .lbl{position:absolute;left:10px;top:4px;z-index:2;font-size:11px;color:var(--mut);pointer-events:none}
 .pane .lbl i{font-style:normal;margin-right:6px}
-#main{height:320px} #kd{height:130px} #macd{height:150px}
+#main{height:270px}
+.per{display:flex;gap:22px;margin:8px 4px 0}
+.per button{background:none;border:0;border-bottom:3px solid transparent;font-size:16px;font-weight:700;color:var(--mut);padding:2px 2px 4px;cursor:pointer}
+.per button.on{color:var(--tx);border-bottom-color:var(--acc)}
+.info{font-size:12.5px;color:var(--tx);line-height:1.55;letter-spacing:-.2px}
+.info .ma{font-weight:700}
+.mainp{padding:2px 2px 0}
+.tg{display:flex;gap:11px;overflow-x:auto;padding:4px 4px 10px;scrollbar-width:none;white-space:nowrap}
+.tg::-webkit-scrollbar{display:none}
+.tg label{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:700;flex:none;cursor:pointer}
+.tg input{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:2px solid #b9a582;border-radius:4px;background:var(--card);margin:0;display:grid;place-content:center;cursor:pointer}
+.tg input:checked{background:#8b7a4e;border-color:#8b7a4e}
+.tg input:checked::after{content:'✓';color:#fff;font-size:14px;font-weight:800;line-height:1}
+.ind{height:316px;overflow-y:auto;scroll-snap-type:y mandatory;border:1px solid var(--line);border-radius:12px;background:var(--card);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.ip{height:158px;scroll-snap-align:start;display:flex;flex-direction:column}
+.ih{background:#e3d8c4;font-size:14px;font-weight:700;padding:4px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.ic{flex:1;min-height:0;position:relative}
+.ic .na{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;z-index:5;background:var(--card)}
+.indhint{font-size:12px;color:var(--mut);text-align:center;margin:4px 0 8px}
 .sig{background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:4px}
 .sig h3{margin:4px 0 6px;font-size:15px;color:var(--acc)}
 .sig ul{margin:0;padding-left:18px}
@@ -61,19 +79,37 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="wvBtn" class="wvb" style="margin-left:auto">頭、底</button><button id="simBtn" style="background:#fdf9f1;color:#1f7fa8;border:1px solid #8b6a42;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#fdf9f1;color:#c28a12;border:1px solid #c9b48a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="simBtn" style="margin-left:auto;background:#fdf9f1;color:#1f7fa8;border:1px solid #8b6a42;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#fdf9f1;color:#c28a12;border:1px solid #c9b48a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
+  <div class="per" id="per"><button data-p="d" class="on">日K</button><button data-p="w">週K</button><button data-p="m">月K</button></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane"><div class="lbl"><i style="color:#c28a12">━ 5MA</i><i style="color:#6b5a48">━ 10MA</i><i style="color:#1f8fb0">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div><div id="wvOv"></div></div>
-  <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#a8772c">━ K(5,3)</i><i style="color:#1f7fa8">━ D(5,3)</i></div><div id="kd"></div></div></details>
-  <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#a8772c">━ DIF</i><i style="color:#1f7fa8">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
+  <div class="pane mainp"><div id="main"></div><div id="wvOv"></div></div>
+  <div class="tg" id="tg">
+    <label><input type="checkbox" data-t="wv">頭底</label>
+    <label><input type="checkbox" data-t="bb">布林通道</label>
+    <label><input type="checkbox" data-t="m5" checked>5日</label>
+    <label><input type="checkbox" data-t="m10" checked>10日</label>
+    <label><input type="checkbox" data-t="m20" checked>20日</label>
+    <label><input type="checkbox" data-t="m60" checked>60日</label>
+  </div>
+  <div class="ind" id="ind">
+    <div class="ip"><div class="ih" id="h-vol"></div><div class="ic" id="c-vol"></div></div>
+    <div class="ip"><div class="ih" id="h-kd"></div><div class="ic" id="c-kd"></div></div>
+    <div class="ip"><div class="ih" id="h-md"></div><div class="ic" id="c-md"></div></div>
+    <div class="ip"><div class="ih" id="h-fi"></div><div class="ic" id="c-fi"></div></div>
+    <div class="ip"><div class="ih" id="h-it"></div><div class="ic" id="c-it"></div></div>
+    <div class="ip"><div class="ih" id="h-dl"></div><div class="ic" id="c-dl"></div></div>
+  </div>
+  <div class="indhint" id="indhint">↕ 上下滑動切換：成交量・KD・MACD・外資・投信・自營商</div>
   <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
   <details class="box how" id="bHow"><summary>指標怎麼看</summary>
     <b>KD：</b>K 由下往上穿過 D＝黃金交叉（轉強），反之＝死亡交叉（轉弱）。K 在 80 以上＝過熱，20 以下＝超賣；低檔黃金交叉比高檔的更有參考性。<br>
     <b>MACD：</b>柱狀體（OSC）由綠翻紅＝動能轉強，由紅翻綠＝動能轉弱。DIF 在 0 軸之上＝多方區，之下＝空方區。<br>
-    <b>均線：</b>收盤在 5MA 之上＝短線偏強；20MA（月線）下彎時是壓力。KD 反應快但容易鈍化，MACD 慢但較穩，兩者同方向時訊號較可靠。
+    <b>均線：</b>收盤在 5MA 之上＝短線偏強；20MA（月線）下彎時是壓力。KD 反應快但容易鈍化，MACD 慢但較穩，兩者同方向時訊號較可靠。<br>
+    <b>布林通道：</b>中軌＝20 日均線，上下軌＝中軌 ± 2 倍標準差。股價碰上軌偏強但易拉回，碰下軌偏弱但有支撐；通道變窄代表即將變盤。<br>
+    <b>三大法人：</b>紅柱＝買超、綠柱＝賣超（單位：張）。外資看大方向，投信連續買超常是作帳行情，自營商偏短線。
   </details>
 </main>
-<footer>資料：Yahoo Finance、期交所｜每天自動更新｜僅供參考，非投資建議</footer>
+<footer>資料：Yahoo Finance、期交所、證交所、櫃買中心｜圖表：<a href="https://www.tradingview.com/" target="_blank" rel="noopener" style="font-size:12px">TradingView</a>｜每天自動更新｜僅供參考，非投資建議</footer>
 
 <script src="pm/lwc.js"></script>
 <script src="pm/embed.js"></script>
@@ -114,25 +150,37 @@ const base = {
   rightPriceScale: { borderColor: '#e2d4bc', minimumWidth: 64 },
   timeScale: { borderColor: '#e2d4bc', rightOffset: 3 },
   crosshair: { mode: 0 },
+  handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
   localization: { locale: 'zh-TW', dateFormat: 'yyyy/MM/dd' },
 };
 const charts = [], S = {};
 function mk(id, extra = {}) { const c = LightweightCharts.createChart($(id), { ...base, ...extra }); charts.push(c); return c; }
-const cMain = mk('#main', { rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .12, bottom: .2 } } });
-const cKD = mk('#kd', { timeScale: { visible: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .15, bottom: .05 } } });
-const cMD = mk('#macd', { timeScale: { visible: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .15, bottom: .05 } } });
-S.candle = cMain.addCandlestickSeries({ upColor: UP, downColor: DN, borderUpColor: UP, borderDownColor: DN, wickUpColor: UP, wickDownColor: DN });
-S.vol = cMain.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
-cMain.priceScale('vol').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
+const sub = { layout: { ...base.layout, attributionLogo: false }, timeScale: { visible: false }, handleScroll: { ...base.handleScroll, mouseWheel: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .12, bottom: .06 } } };
+const cMain = mk('#main', { rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .08, bottom: .06 } } });
+const C_ = {};
+['vol', 'kd', 'md', 'fi', 'it', 'dl'].forEach(k => C_[k] = mk('#c-' + k, sub));
 const line = (c, color, w = 1.5, st = 0) => c.addLineSeries({ color, lineWidth: w, lineStyle: st, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-S.ma5 = line(cMain, '#c28a12', 2); S.ma10 = line(cMain, '#6b5a48', 1); S.ma20 = line(cMain, '#1f8fb0', 2); S.ma60 = line(cMain, '#CC79A7', 2, 2);
-S.k = line(cKD, '#a8772c', 2); S.d = line(cKD, '#1f7fa8', 2);
+const BBC = '#e8891c';
+// 布林通道：上軌往下填淡橘、下軌往下用底色蓋掉 → 只剩通道內有顏色（要先加，才會在K棒後面）
+S.bbU = cMain.addAreaSeries({ lineColor: BBC, lineWidth: 1, topColor: 'rgba(232,137,28,.13)', bottomColor: 'rgba(232,137,28,.13)', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+S.bbL = cMain.addAreaSeries({ lineColor: BBC, lineWidth: 1, topColor: '#fdf9f1', bottomColor: '#fdf9f1', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+S.bbM = line(cMain, BBC, 1, 2);
+S.candle = cMain.addCandlestickSeries({ upColor: UP, downColor: DN, borderUpColor: UP, borderDownColor: DN, wickUpColor: UP, wickDownColor: DN });
+const MAC = { m5: '#c28a12', m10: '#6b5a48', m20: '#1f8fb0', m60: '#CC79A7' };
+S.m5 = line(cMain, MAC.m5, 2); S.m10 = line(cMain, MAC.m10, 1); S.m20 = line(cMain, MAC.m20, 2); S.m60 = line(cMain, MAC.m60, 2, 2);
+const hist = c => c.addHistogramSeries({ lastValueVisible: false, priceLineVisible: false, priceFormat: { type: 'volume' } });
+S.vol = hist(C_.vol);
+const KC = '#d9534f', DC = '#2f6fd6';
+S.k = line(C_.kd, KC, 2); S.d = line(C_.kd, DC, 2);
 S.k.createPriceLine({ price: 80, color: '#c81e1e88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
 S.k.createPriceLine({ price: 20, color: '#15893a88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
-S.osc = cMD.addHistogramSeries({ lastValueVisible: false, priceLineVisible: false });
-S.dif = line(cMD, '#a8772c', 2); S.sig = line(cMD, '#1f7fa8', 2);
+S.osc = C_.md.addHistogramSeries({ lastValueVisible: false, priceLineVisible: false });
+const DIFC = '#e8891c', SIGC = '#7a6cf0';
+S.dif = line(C_.md, DIFC, 2); S.sig = line(C_.md, SIGC, 2);
+S.fi = hist(C_.fi); S.it = hist(C_.it); S.dl = hist(C_.dl); S.dh = line(C_.dl, '#b8860b', 1.5);
+[S.fi, S.it, S.dl].forEach(x => x.applyOptions({ base: 0 }));
 
-// 三張圖同步捲動／縮放
+// 全部圖同步捲動／縮放
 let syncing = false;
 charts.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
   if (syncing || !r) return; syncing = true;
@@ -140,8 +188,29 @@ charts.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
 }));
 
 let DATA, cur;
+// ---- 顯示開關（記在手機）----
+const TG = (() => { try { return { wv: false, bb: false, m5: true, m10: true, m20: true, m60: true, ...JSON.parse(localStorage.getItem('k-tg') || '{}') }; } catch { return { wv: false, bb: false, m5: true, m10: true, m20: true, m60: true }; } })();
+try { if (localStorage.getItem('k-waves') === '1' && !localStorage.getItem('k-tg')) TG.wv = true; } catch {}
+let WV = TG.wv;
+let PER = (() => { try { return localStorage.getItem('k-per') || 'd'; } catch { return 'd'; } })();
+function applyTg() {
+  document.querySelectorAll('#tg input').forEach(i => i.checked = !!TG[i.dataset.t]);
+  ['m5', 'm10', 'm20', 'm60'].forEach(k => S[k].applyOptions({ visible: TG[k] }));
+  [S.bbU, S.bbL, S.bbM].forEach(x => x.applyOptions({ visible: TG.bb }));
+  WV = TG.wv; drawWaves();
+}
+$('#tg').addEventListener('change', e => {
+  const t = e.target.dataset.t; if (!t) return;
+  TG[t] = e.target.checked; try { localStorage.setItem('k-tg', JSON.stringify(TG)); } catch {}
+  applyTg(); if (cur) show(cur.id, true);
+});
+$('#per').onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.p === PER) return;
+  PER = b.dataset.p; try { localStorage.setItem('k-per', PER); } catch {}
+  if (cur) show(cur.id, false, true);
+};
+
 // ---- 頭／底標示（5MA 轉折波：收盤跌破 5MA 往左取最高點為頭；收盤突破 5MA 往左取最低點為底，含影線）----
-let WV = (() => { try { return localStorage.getItem('k-waves') === '1'; } catch { return false; } })();
 function waves(B) {
   const C = B.map(b => b[4]), out = []; let st = null, seg = 4;
   const m5 = i => (C[i] + C[i - 1] + C[i - 2] + C[i - 3] + C[i - 4]) / 5;
@@ -154,11 +223,7 @@ function waves(B) {
   return out;
 }
 let WVB = null;
-function drawWaves(B) {
-  if (B) WVB = B;
-  const btn = document.getElementById('wvBtn'); if (btn) btn.classList.toggle('on', WV);
-  requestAnimationFrame(placeWaves);
-}
+function drawWaves(B) { if (B) WVB = B; requestAnimationFrame(placeWaves); }
 function placeWaves() {
   const ov = document.getElementById('wvOv'), el = document.getElementById('main'); if (!ov) return;
   if (!WV || !WVB) { ov.innerHTML = ''; return; }
@@ -172,52 +237,128 @@ function placeWaves() {
 }
 const ser = (T, v) => T.map((t, i) => v[i] == null || isNaN(v[i]) ? { time: t } : { time: t, value: v[i] });
 
+// ---- 日K → 週K／月K ----
+const ymdU = d => d.toISOString().slice(0, 10);
+const wkKey = d => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7); return ymdU(t); };
+const moKey = d => d.slice(0, 7) + '-01';
+const KEYF = { d: d => d, w: wkKey, m: moKey };
+function aggK(daily, key) {
+  const out = [];
+  for (const b of daily) {
+    const k = key(b[0]), l = out.at(-1);
+    if (l && l[0] === k) { l[2] = Math.max(l[2], b[2]); l[3] = Math.min(l[3], b[3]); l[4] = b[4]; l[5] += b[5]; }
+    else out.push([k, b[1], b[2], b[3], b[4], b[5]]);
+  }
+  return out;
+}
+function barsOf(it, per) {
+  if (per === 'd') return it.bars;
+  const key = KEYF[per], long = per === 'w' ? it.w : it.mo, A = aggK(it.bars, key);
+  if (!long?.length) return A.slice(1).length >= 10 ? A.slice(1) : A;
+  const m = new Map(long.map(b => [b[0], b])); A.slice(-2).forEach(b => m.set(b[0], b));
+  return [...m.values()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function instOf(it, per, T) { // 回傳 [[外資,投信,自營,避險]...] 對齊 T；沒有資料回 null
+  if (!it.f?.length) return null;
+  const key = KEYF[per], m = new Map();
+  it.f.forEach(r => { const k = key(r[0]), a = m.get(k) || [0, 0, 0, 0]; for (let i = 0; i < 4; i++) a[i] += r[i + 1] || 0; m.set(k, a); });
+  const first = it.f[0][0];
+  return T.map(t => m.get(t) || (t >= key(first) ? [0, 0, 0, 0] : null));
+}
+function bands(C, n = 20, k = 2) {
+  const u = [], m = [], l = [];
+  C.forEach((_, i) => {
+    if (i + 1 < n) { u.push(null); m.push(null); l.push(null); return; }
+    const a = C.slice(i + 1 - n, i + 1), mean = a.reduce((s, x) => s + x, 0) / n, sd = Math.sqrt(a.reduce((s, x) => s + (x - mean) ** 2, 0) / n);
+    m.push(mean); u.push(mean + k * sd); l.push(mean - k * sd);
+  });
+  return { u, m, l };
+}
+function na(id, txt) {
+  const el = $('#c-' + id); let d = el.querySelector('.na');
+  if (!txt) { d?.remove(); return; }
+  if (!d) { d = document.createElement('div'); d.className = 'na'; el.appendChild(d); }
+  d.textContent = txt;
+}
+const arw = (v, pv) => v == null || pv == null ? '' : v > pv ? '▲' : v < pv ? '▼' : '';
+const sgnC = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
+const iFmt = v => v == null ? '—' : (v > 0 ? '+' : '') + Math.round(v).toLocaleString('zh-TW');
+
 let LIST = [];
 const STK = {};
-async function show(id, keep = false) {
+async function show(id, keep = false, perChange = false) {
   const isStk = /^\d{4}$|^00\d{2,4}[A-Z]?$/.test(id || '');
   let it = STK[id] || (isStk ? null : DATA.items.find(x => x.id === id));
   if (!it && id) {
     try {
-      const o = await (await fetch(`k/${encodeURIComponent(id)}.json?t=${Date.now()}`)).json();
-      it = STK[o.c] = { id: o.c, name: `${o.n} ${o.c}`, group: 'stock', bars: o.b, market: o.m };
+      const [o, f] = await Promise.all([
+        fetch(`k/${encodeURIComponent(id)}.json?t=${Date.now()}`).then(r => r.json()),
+        fetch(`k/f/${encodeURIComponent(id)}.json?t=${Date.now()}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      it = STK[o.c] = { id: o.c, name: `${o.n} ${o.c}`, group: 'stock', bars: o.b, w: o.w, mo: o.mo, market: o.m, f: f?.d || null };
     } catch { $('#info').innerHTML = `<span class="dn">找不到「${id}」的K線資料</span>（可能還在建立中，或代號有誤）`; return; }
   }
   it = it || DATA.items[0];
   if (it.bars.length < 30) { $('#info').innerHTML = `<span class="dn">${it.name} 資料不足 30 天，無法計算指標</span>`; return; }
+  const changed = cur !== it;
   cur = it; history.replaceState(null, '', '?s=' + it.id);
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.id === it.id));
-  const B = it.bars, T = B.map(b => b[0]), O = B.map(b => b[1]), H = B.map(b => b[2]), L = B.map(b => b[3]), C = B.map(b => b[4]), V = B.map(b => b[5]);
-  const m5 = sma(C, 5), m10 = sma(C, 10), m20 = sma(C, 20), m60 = sma(C, 60), K = kd(H, L, C), M = macd(C);
+  document.querySelectorAll('#per button').forEach(b => b.classList.toggle('on', b.dataset.p === PER));
+  const B = barsOf(it, PER), PN = { d: '日', w: '週', m: '月' }[PER];
+  const T = B.map(b => b[0]), H = B.map(b => b[2]), L = B.map(b => b[3]), C = B.map(b => b[4]), V = B.map(b => b[5]);
+  const MA = { m5: sma(C, 5), m10: sma(C, 10), m20: sma(C, 20), m60: sma(C, 60) }, K = kd(H, L, C), M = macd(C), BB = bands(C);
   const prec = C.at(-1) >= 1000 ? 0 : 2; P = prec;
   S.candle.applyOptions({ priceFormat: { type: 'price', precision: prec, minMove: prec ? 0.01 : 1 } });
   [S.dif, S.sig, S.osc].forEach(x => x.applyOptions({ priceFormat: { type: 'price', precision: prec ? 2 : 0, minMove: prec ? 0.01 : 1 } }));
   S.candle.setData(B.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
   drawWaves(B);
   const hasVol = V.some(v => v > 0);
-  S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#c81e1e55' : '#15893a55' } : { time: b[0] }));
-  S.ma5.setData(ser(T, m5)); S.ma10.setData(ser(T, m10)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
+  S.vol.setData(B.map((b, i) => hasVol ? { time: b[0], value: b[5], color: b[4] >= (i ? B[i - 1][4] : b[1]) ? '#c81e1e99' : '#15893a99' } : { time: b[0] }));
+  na('vol', hasVol ? '' : '這項沒有成交量資料');
+  ['m5', 'm10', 'm20', 'm60'].forEach(k => S[k].setData(ser(T, MA[k])));
+  S.bbU.setData(ser(T, BB.u)); S.bbL.setData(ser(T, BB.l)); S.bbM.setData(ser(T, BB.m));
   S.k.setData(ser(T, K.k)); S.d.setData(ser(T, K.d));
   S.dif.setData(ser(T, M.dif)); S.sig.setData(ser(T, M.sig));
   S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#c81e1eaa' : '#15893aaa' })));
-  const n = B.length, from = Math.max(0, n - 90);
-  if (!keep) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
+  // 三大法人
+  const F = it.group === 'stock' ? instOf(it, PER, T) : null;
+  const hb = (j, col) => F && F[j] ? { time: T[j], value: F[j][col], color: F[j][col] >= 0 ? '#c81e1e' : '#15893a' } : { time: T[j] };
+  S.fi.setData(T.map((_, j) => hb(j, 0))); S.it.setData(T.map((_, j) => hb(j, 1))); S.dl.setData(T.map((_, j) => hb(j, 2)));
+  S.dh.setData(T.map((t, j) => F && F[j] ? { time: t, value: F[j][3] } : { time: t }));
+  const naTxt = it.group !== 'stock' ? '只有個股有三大法人資料' : F ? '' : '法人資料建立中，每天收盤後更新';
+  ['fi', 'it', 'dl'].forEach(k => na(k, naTxt));
+  const n = B.length, show0 = { d: 90, w: 80, m: 60 }[PER], from = Math.max(0, n - show0);
+  if (!keep || perChange || changed) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
 
   const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
   $('#name').textContent = it.name; drawStar();
   $('#close').innerHTML = `<span class="${cl}">${fmt(C[i])}</span>`;
   $('#chg').innerHTML = `<span class="${cl}">${ch >= 0 ? '▲' : '▼'}${fmt(Math.abs(ch))}（${p.toFixed(2)}%）</span> <span class="mut" style="font-size:12px">${T[i]}</span>`;
   const info = j => {
-    const c = B[j], up = c[4] >= c[1];
-    $('#info').innerHTML = `<b>${c[0]}</b>　開 ${fmt(c[1])}　高 ${fmt(c[2])}　低 ${fmt(c[3])}　收 <b class="${up ? 'up' : 'dn'}">${fmt(c[4])}</b><br>
-      5MA ${fmt(m5[j])}　10MA ${fmt(m10[j])}　20MA ${fmt(m20[j])}　K ${fmt(K.k[j], 1)}　D ${fmt(K.d[j], 1)}　DIF ${fmt(M.dif[j])}　MACD ${fmt(M.sig[j])}　OSC <span class="${M.osc[j] >= 0 ? 'up' : 'dn'}">${fmt(M.osc[j])}</span>`;
+    const c = B[j], pc = j ? B[j - 1][4] : c[1], d = c[4] - pc, dp = pc ? d / pc * 100 : 0, dc = sgnC(d);
+    const cc = v => v > pc ? 'up' : v < pc ? 'dn' : '';
+    const ma = ['m5', 'm10', 'm20', 'm60'].filter(k => TG[k])
+      .map(k => `<span class="ma" style="color:${MAC[k]};white-space:nowrap">${k.slice(1)}MA ${fmt(MA[k][j])}${arw(MA[k][j], MA[k][j - 1])}</span>`).join(' ');
+    const bb = TG.bb ? `<br><span class="ma" style="color:${BBC}">上軌 ${fmt(BB.u[j])}${arw(BB.u[j], BB.u[j - 1])}　中軌 ${fmt(BB.m[j])}${arw(BB.m[j], BB.m[j - 1])}　下軌 ${fmt(BB.l[j])}${arw(BB.l[j], BB.l[j - 1])}</span>` : '';
+    $('#info').innerHTML = `<b>${PER === 'm' ? c[0].slice(0, 7) : PER === 'w' ? c[0] + ' 週' : c[0]}</b>　開 <b class="${cc(c[1])}">${fmt(c[1])}</b>　高 <b class="${cc(c[2])}">${fmt(c[2])}</b>　低 <b class="${cc(c[3])}">${fmt(c[3])}</b>　收 <b class="${dc}">${fmt(c[4])}</b>　漲跌 <b class="${dc}">${d > 0 ? '+' : ''}${fmt(d)}（${d > 0 ? '+' : ''}${dp.toFixed(2)}%）</b>${ma ? '<br>' + ma : ''}${bb}`;
+    const pv = j ? V[j - 1] : null;
+    $('#h-vol').innerHTML = `成交量 ${hasVol ? Math.round(V[j]).toLocaleString('zh-TW') : '—'}${hasVol ? arw(V[j], pv) : ''}`;
+    $('#h-kd').innerHTML = `<span style="color:${KC}">K ${fmt(K.k[j], 2)}${arw(K.k[j], K.k[j - 1])}</span>　<span style="color:${DC}">D ${fmt(K.d[j], 2)}${arw(K.d[j], K.d[j - 1])}</span>`;
+    $('#h-md').innerHTML = `<span style="color:${DIFC}">DIF ${fmt(M.dif[j])}${arw(M.dif[j], M.dif[j - 1])}</span>　<span style="color:${SIGC}">MACD ${fmt(M.sig[j])}${arw(M.sig[j], M.sig[j - 1])}</span>　<span class="${sgnC(M.osc[j])}">OSC ${fmt(M.osc[j])}${arw(M.osc[j], M.osc[j - 1])}</span>`;
+    const f = F?.[j];
+    $('#h-fi').innerHTML = `外資買賣超 <span class="${sgnC(f?.[0])}">${f ? iFmt(f[0]) : '—'}</span> <span class="mut" style="font-size:12px;font-weight:400">張</span>`;
+    $('#h-it').innerHTML = `投信買賣超 <span class="${sgnC(f?.[1])}">${f ? iFmt(f[1]) : '—'}</span> <span class="mut" style="font-size:12px;font-weight:400">張</span>`;
+    $('#h-dl').innerHTML = `自營商買賣超 <span class="${sgnC(f?.[2])}">${f ? iFmt(f[2]) : '—'}</span>　<span style="color:#b8860b">避險 ${f ? iFmt(f[3]) : '—'}</span> <span class="mut" style="font-size:12px;font-weight:400">張</span>`;
   };
   info(i);
-  cMain.unsubscribeCrosshairMove(cMain._h || (() => {}));
-  cMain._h = prm => { const j = prm.time ? T.indexOf(prm.time) : -1; info(j >= 0 ? j : i); };
-  cMain.subscribeCrosshairMove(cMain._h);
+  charts.forEach(c => {
+    if (c._h) c.unsubscribeCrosshairMove(c._h);
+    c._h = prm => { const j = prm.time ? T.indexOf(prm.time) : -1; info(j >= 0 ? j : i); };
+    c.subscribeCrosshairMove(c._h);
+  });
 
   // ---- 訊號判讀 ----
+  const m5 = MA.m5, m20 = MA.m20;
   const out = [];
   const k = K.k[i], d = K.d[i], k1 = K.k[i - 1], d1 = K.d[i - 1];
   if (k > d && k1 <= d1) out.push(`<span class="up">KD 黃金交叉</span>${k < 30 ? '（低檔，較有參考性）' : k > 70 ? '（高檔，留意鈍化）' : ''}`);
@@ -232,12 +373,16 @@ async function show(id, keep = false) {
   else out.push(`MACD 柱狀體紅色${o > o1 ? '<span class="up">擴大中</span>（漲勢加速）' : '<span class="dn">縮小中</span>（漲勢減緩）'}`);
   out.push(`DIF ${M.dif[i] >= 0 ? '<span class="up">在 0 軸之上（多方區）</span>' : '<span class="dn">在 0 軸之下（空方區）</span>'}`);
   const m20up = m20[i] >= m20[i - 5];
-  out.push(`收盤${C[i] >= m5[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 5MA（${fmt(m5[i])}），${C[i] >= m20[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 20MA（${fmt(m20[i])}），20MA ${m20up ? '<span class="up">上彎</span>' : '<span class="dn">下彎</span>'}`);
+  out.push(`收盤${C[i] >= m5[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 5${PN}均（${fmt(m5[i])}），${C[i] >= m20[i] ? '<span class="up">站上</span>' : '<span class="dn">跌破</span>'} 20${PN}均（${fmt(m20[i])}），20${PN}均${m20up ? '<span class="up">上揚</span>' : '<span class="dn">下彎</span>'}`);
+  if (BB.u[i] != null) out.push(`布林通道：收盤${C[i] >= BB.u[i] ? '<span class="up">碰上軌（強勢，留意拉回）</span>' : C[i] <= BB.l[i] ? '<span class="dn">碰下軌（弱勢，看是否止跌）</span>' : C[i] >= BB.m[i] ? '在中軌之上（偏多）' : '在中軌之下（偏空）'}`);
+  if (F && F[i]) { const s5 = F.slice(-5).filter(Boolean); const fs = s5.reduce((a, x) => a + x[0], 0), is = s5.reduce((a, x) => a + x[1], 0);
+    out.push(`近 5 ${PN}法人：外資 <span class="${sgnC(fs)}">${iFmt(fs)} 張</span>、投信 <span class="${sgnC(is)}">${iFmt(is)} 張</span>`); }
   const bull = [k > d, o >= 0, C[i] >= m5[i], C[i] >= m20[i]].filter(Boolean).length;
   const verdict = bull >= 3 ? '<span class="up">技術面偏多</span>' : bull <= 1 ? '<span class="dn">技術面偏空</span>' : '多空拉鋸，等方向明確';
-  $('#sig').innerHTML = `<h3>📌 ${it.name} 技術訊號（${T[i]}）：${verdict}</h3><ul>${out.map(x => `<li>${x}</li>`).join('')}</ul>
+  $('#sig').innerHTML = `<h3>📌 ${it.name} ${PN}K 技術訊號（${T[i]}）：${verdict}</h3><ul>${out.map(x => `<li>${x}</li>`).join('')}</ul>
     ${it.id === 'TXN' ? '<p class="mut" style="font-size:12px;margin:6px 0 0">夜盤 K 線日期為期交所歸屬的次一交易日；換月時價格會有跳動。</p>' : ''}`;
 }
+applyTg();
 
 // 收合狀態記住
 document.querySelectorAll('details.box').forEach(d => {
@@ -287,7 +432,6 @@ function drawStar() {
 }
 $('#star').onclick = () => { const c = starCode(); if (c) WL.pick(c, cur.name, drawStar); };
 WL.load().then(drawStar);
-document.getElementById('wvBtn').addEventListener('click', e => { e.preventDefault(); WV = !WV; try { localStorage.setItem('k-waves', WV ? '1' : '0'); } catch {} drawWaves(cur?.bars); });
 cMain.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(placeWaves));
 new ResizeObserver(() => requestAnimationFrame(placeWaves)).observe(document.getElementById('main'));
 // ---- 找相似走勢：拿這檔近 N 天收盤的「形狀」跟全部台股比 ----
