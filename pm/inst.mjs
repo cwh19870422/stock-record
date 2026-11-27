@@ -58,7 +58,9 @@ async function tpex(d) {
   try {
     const j = await getJSON(`https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date=${d.replace(/-/g, '/')}&response=json`);
     const t = (j.tables || []).find(t => t.fields && t.data);
-    if (t) return t.data.length ? parse(t.fields, t.data, '上櫃') : new Map();
+    if (t && !t.data.length) return new Map();
+    if (t && t.fields.length >= 23 && t.fields.filter(f => String(f).includes('買賣超')).length >= 7) return pos(t.data); // 新網址欄名沒寫法人別，用固定位置
+    if (t) return parse(t.fields, t.data, '上櫃');
     if (j.stat && j.stat !== 'ok' && j.stat !== 'OK') say(`上櫃 ${d}：${j.stat}`);
   } catch (e) { say(`上櫃新網址 ${d}：${e.message}`); }
   // 舊網址備援：欄位固定位置
@@ -66,10 +68,13 @@ async function tpex(d) {
   const j = await getJSON(`https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=${roc}`);
   const rows = j.aaData || j.tables?.[0]?.data;
   if (!rows) return null;
-  if (!rows.length) return new Map();
+  return rows.length ? pos(rows) : new Map();
+}
+// 櫃買欄位順序：代號,名稱,[外資不含自營商 買/賣/超],[外資自營商 買/賣/超],[外資合計 買/賣/超],[投信],[自營商自行買賣],[自營商避險],[自營商合計],三大法人合計
+function pos(rows) {
   const z = v => Math.round(num(v) / 1000), m = new Map();
   rows.forEach(r => { const code = String(r[0]).trim(); if (/^\d{4}$|^00\d{2,4}[A-Z]?$/.test(code)) m.set(code, [z(r[10]), z(r[13]), z(r[16]), z(r[19])]); });
-  if (!parse['上櫃舊']) { parse['上櫃舊'] = 1; say('上櫃：使用舊網址（固定欄位）'); }
+  if (!pos.said) { pos.said = 1; say(`上櫃：用固定欄位（例：${rows[0][0]} ${rows[0][1]} 外資 ${z(rows[0][10])} 投信 ${z(rows[0][13])}）`); }
   return m;
 }
 
