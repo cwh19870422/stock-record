@@ -4,24 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>K線技術分析</title>
-<meta name="theme-color" content="#0f1a2e">
+<meta name="theme-color" content="#2f1a10">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
-:root{--bg:#0f1a2e;--card:#17243d;--line:#26375a;--tx:#e8eef8;--mut:#93a3bf;--up:#ff5a5a;--dn:#2ecc71;--acc:#f2b84b;--blue:#5aa9ff}
+:root{--bg:#efe5d3;--card:#fdf9f1;--line:#e2d4bc;--tx:#2b2118;--mut:#8a7862;--up:#c81e1e;--dn:#15893a;--acc:#8b6a42;--blue:#1f7fa8}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:30px}
-header{position:sticky;top:0;z-index:5;background:rgba(15,26,46,.96);padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:5;background:rgba(239,229,211,.96);padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid var(--line)}
 .top{display:flex;justify-content:space-between;align-items:center}
 h1{margin:0;font-size:18px}
 a{color:var(--blue);text-decoration:none;font-size:14px}
 .tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer}
-.tabs button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:700}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700}
 .srch{display:flex;gap:6px;margin-top:8px;position:relative}
 .srch input{flex:1;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:16px}
-.srch button{background:var(--acc);color:#1a1a1a;border:0;border-radius:10px;padding:0 14px;font-weight:700;font-size:14px}
-.sug{position:absolute;left:0;right:60px;top:42px;background:#1d2c48;border:1px solid var(--line);border-radius:10px;z-index:9;max-height:260px;overflow:auto;display:none}
+.srch button{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:0 14px;font-weight:700;font-size:14px}
+.sug{position:absolute;left:0;right:60px;top:42px;background:#f3e9d8;border:1px solid var(--line);border-radius:10px;z-index:9;max-height:260px;overflow:auto;display:none}
 .sug div{padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
 .sug div span{color:var(--mut);font-size:12px;margin-left:6px}
 .tabs .sep{flex:none;color:var(--mut);font-size:11px;align-self:center;padding:0 2px}
@@ -40,18 +40,18 @@ main{max-width:900px;margin:0 auto;padding:10px}
 .sig h3{margin:4px 0 6px;font-size:15px;color:var(--acc)}
 .sig ul{margin:0;padding-left:18px}
 .sig li{margin:3px 0}
-.how{font-size:13px;color:#c9d5ea;background:var(--card);border-radius:12px;padding:10px 12px;margin-top:8px}
+.how{font-size:13px;color:#4a3c2e;background:var(--card);border-radius:12px;padding:10px 12px;margin-top:8px}
 .how b{color:var(--acc)}
 footer{color:var(--mut);font-size:12px;text-align:center;padding:10px}
 details.box>summary{cursor:pointer;color:var(--mut);font-size:13px;padding:2px 6px;list-style:none}
 details.box>summary::-webkit-details-marker{display:none}
 details.box>summary::before{content:'▶ ';font-size:10px}
 details.box[open]>summary::before{content:'▼ '}
-.wvb{background:#17243d;color:#93a3bf;border:1px solid #26375a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.wvb{background:#fdf9f1;color:#8a7862;border:1px solid #e2d4bc;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #wvOv{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:3;overflow:hidden}
 #wvOv b{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px #0008}
 #wvOv b.h{background:#e53935} #wvOv b.l{background:#22a052}
-.wvb.on{background:#F0E442;color:#1a1a1a;border-color:#F0E442;font-weight:700}
+.wvb.on{background:#c28a12;color:#fff;border-color:#c28a12;font-weight:700}
 </style>
 </head>
 <body>
@@ -61,11 +61,11 @@ details.box[open]>summary::before{content:'▼ '}
   <div class="tabs" id="tabs"></div>
 </header>
 <main>
-  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="wvBtn" class="wvb" style="margin-left:auto">頭、底</button><button id="simBtn" style="background:#17243d;color:#7cc4ff;border:1px solid #2b5a8a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#17243d;color:#F0E442;border:1px solid #5a5520;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
+  <div class="head"><span class="n" id="name"></span><span class="c" id="close"></span><span id="chg"></span><span id="live" style="font-size:12px"></span><button id="wvBtn" class="wvb" style="margin-left:auto">頭、底</button><button id="simBtn" style="background:#fdf9f1;color:#1f7fa8;border:1px solid #8b6a42;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">🔍 找相似走勢</button><button id="star" style="background:#fdf9f1;color:#c28a12;border:1px solid #c9b48a;border-radius:99px;padding:4px 12px;font-size:14px;cursor:pointer;display:none">☆ 加入自選</button></div>
   <div class="info" id="info">載入中…</div>
-  <div class="pane"><div class="lbl"><i style="color:#F0E442">━ 5MA</i><i style="color:#FFFFFF">━ 10MA</i><i style="color:#3DA5FF">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div><div id="wvOv"></div></div>
-  <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ K(5,3)</i><i style="color:#5aa9ff">━ D(5,3)</i></div><div id="kd"></div></div></details>
-  <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#f2b84b">━ DIF</i><i style="color:#5aa9ff">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
+  <div class="pane"><div class="lbl"><i style="color:#c28a12">━ 5MA</i><i style="color:#6b5a48">━ 10MA</i><i style="color:#1f8fb0">━ 20MA</i><i style="color:#CC79A7">┅ 60MA</i></div><div id="main"></div><div id="wvOv"></div></div>
+  <details class="box pane" id="bKD" open><summary>KD 指標（5,3,3）</summary><div style="position:relative"><div class="lbl"><i style="color:#a8772c">━ K(5,3)</i><i style="color:#1f7fa8">━ D(5,3)</i></div><div id="kd"></div></div></details>
+  <details class="box pane" id="bMD" open><summary>MACD 指標（10,20,10）</summary><div style="position:relative"><div class="lbl"><i style="color:#a8772c">━ DIF</i><i style="color:#1f7fa8">━ MACD</i><i>▮ OSC</i></div><div id="macd"></div></div></details>
   <details class="box sig" id="bSig" open><summary>技術訊號判讀</summary><div id="sig"></div></details>
   <details class="box how" id="bHow"><summary>指標怎麼看</summary>
     <b>KD：</b>K 由下往上穿過 D＝黃金交叉（轉強），反之＝死亡交叉（轉弱）。K 在 80 以上＝過熱，20 以下＝超賣；低檔黃金交叉比高檔的更有參考性。<br>
@@ -83,7 +83,7 @@ details.box[open]>summary::before{content:'▼ '}
 const $ = s => document.querySelector(s);
 let P = 2;
 const fmt = (v, d = P) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
-const UP = '#ff5a5a', DN = '#2ecc71';
+const UP = '#c81e1e', DN = '#15893a';
 const GROUP = { idx: '大盤', night: '大盤', us: '美股', top5: '權值股', watch: '自選' };
 
 // ---------- 指標計算 ----------
@@ -109,10 +109,10 @@ function macd(C) {
 // ---------- 圖表 ----------
 const base = {
   autoSize: true,
-  layout: { background: { color: 'transparent' }, textColor: '#93a3bf', fontSize: 11 },
-  grid: { vertLines: { color: '#1f2e4a' }, horzLines: { color: '#1f2e4a' } },
-  rightPriceScale: { borderColor: '#26375a', minimumWidth: 64 },
-  timeScale: { borderColor: '#26375a', rightOffset: 3 },
+  layout: { background: { color: 'transparent' }, textColor: '#8a7862', fontSize: 11 },
+  grid: { vertLines: { color: '#ece1cd' }, horzLines: { color: '#ece1cd' } },
+  rightPriceScale: { borderColor: '#e2d4bc', minimumWidth: 64 },
+  timeScale: { borderColor: '#e2d4bc', rightOffset: 3 },
   crosshair: { mode: 0 },
   localization: { locale: 'zh-TW', dateFormat: 'yyyy/MM/dd' },
 };
@@ -125,12 +125,12 @@ S.candle = cMain.addCandlestickSeries({ upColor: UP, downColor: DN, borderUpColo
 S.vol = cMain.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
 cMain.priceScale('vol').applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
 const line = (c, color, w = 1.5, st = 0) => c.addLineSeries({ color, lineWidth: w, lineStyle: st, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-S.ma5 = line(cMain, '#F0E442', 2); S.ma10 = line(cMain, '#FFFFFF', 1); S.ma20 = line(cMain, '#3DA5FF', 2); S.ma60 = line(cMain, '#CC79A7', 2, 2);
-S.k = line(cKD, '#f2b84b', 2); S.d = line(cKD, '#5aa9ff', 2);
-S.k.createPriceLine({ price: 80, color: '#ff5a5a88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
-S.k.createPriceLine({ price: 20, color: '#2ecc7188', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+S.ma5 = line(cMain, '#c28a12', 2); S.ma10 = line(cMain, '#6b5a48', 1); S.ma20 = line(cMain, '#1f8fb0', 2); S.ma60 = line(cMain, '#CC79A7', 2, 2);
+S.k = line(cKD, '#a8772c', 2); S.d = line(cKD, '#1f7fa8', 2);
+S.k.createPriceLine({ price: 80, color: '#c81e1e88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+S.k.createPriceLine({ price: 20, color: '#15893a88', lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
 S.osc = cMD.addHistogramSeries({ lastValueVisible: false, priceLineVisible: false });
-S.dif = line(cMD, '#f2b84b', 2); S.sig = line(cMD, '#5aa9ff', 2);
+S.dif = line(cMD, '#a8772c', 2); S.sig = line(cMD, '#1f7fa8', 2);
 
 // 三張圖同步捲動／縮放
 let syncing = false;
@@ -195,11 +195,11 @@ async function show(id, keep = false) {
   S.candle.setData(B.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
   drawWaves(B);
   const hasVol = V.some(v => v > 0);
-  S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#ff5a5a55' : '#2ecc7155' } : { time: b[0] }));
+  S.vol.setData(B.map(b => hasVol ? { time: b[0], value: b[5], color: b[4] >= b[1] ? '#c81e1e55' : '#15893a55' } : { time: b[0] }));
   S.ma5.setData(ser(T, m5)); S.ma10.setData(ser(T, m10)); S.ma20.setData(ser(T, m20)); S.ma60.setData(ser(T, m60));
   S.k.setData(ser(T, K.k)); S.d.setData(ser(T, K.d));
   S.dif.setData(ser(T, M.dif)); S.sig.setData(ser(T, M.sig));
-  S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#ff5a5aaa' : '#2ecc71aa' })));
+  S.osc.setData(T.map((t, i) => ({ time: t, value: M.osc[i], color: M.osc[i] >= 0 ? '#c81e1eaa' : '#15893aaa' })));
   const n = B.length, from = Math.max(0, n - 90);
   if (!keep) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
 
@@ -293,7 +293,7 @@ new ResizeObserver(() => requestAnimationFrame(placeWaves)).observe(document.get
 // ---- 找相似走勢：拿這檔近 N 天收盤的「形狀」跟全部台股比 ----
 let CLOSES = null;
 const zn = a => { const m = a.reduce((s, x) => s + x, 0) / a.length, sd = Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1; return a.map(x => (x - m) / sd); };
-const spark = a => { const mx = Math.max(...a), mn = Math.min(...a), W = 90, H = 30; return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><polyline fill="none" stroke="${a.at(-1) >= a[0] ? '#ff5a5a' : '#2ecc71'}" stroke-width="1.6" points="${a.map((v, i) => `${(i / (a.length - 1) * W).toFixed(1)},${(H - 2 - (v - mn) / (mx - mn || 1) * (H - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
+const spark = a => { const mx = Math.max(...a), mn = Math.min(...a), W = 90, H = 30; return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><polyline fill="none" stroke="${a.at(-1) >= a[0] ? '#c81e1e' : '#15893a'}" stroke-width="1.6" points="${a.map((v, i) => `${(i / (a.length - 1) * W).toFixed(1)},${(H - 2 - (v - mn) / (mx - mn || 1) * (H - 4)).toFixed(1)}`).join(' ')}"/></svg>`; };
 async function similar(N) {
   if (!CLOSES) CLOSES = await (await fetch('pm/closes.json?t=' + Date.now())).json();
   const me = cur.bars.slice(-N).map(b => b[4]); if (me.length < N) return [];
@@ -310,15 +310,15 @@ async function similar(N) {
 function simModal(N = 24) {
   WL.modal(`<h3>🔍 跟「${WL.esc(cur.name)}」近期走勢相似的股票</h3>
     <div class="row" id="simN">${[[20, '近 20 天'], [24, '近 24 天'], [40, '近 40 天'], [60, '近 60 天']].map(([n, t]) => `<button data-n="${n}"${n === N ? ' class="pri"' : ''}>${t}</button>`).join('')}</div>
-    <p style="font-size:12px;color:#93a3bf;margin:8px 0 4px">比的是收盤價的「形狀」，股價高低不影響；相似度 1.00＝一模一樣。漲跌幅度也要差不多（0.5～2.5 倍）。已排除 ETF 和每天成交不到 500 萬的冷門股。</p>
+    <p style="font-size:12px;color:#8a7862;margin:8px 0 4px">比的是收盤價的「形狀」，股價高低不影響；相似度 1.00＝一模一樣。漲跌幅度也要差不多（0.5～2.5 倍）。已排除 ETF 和每天成交不到 500 萬的冷門股。</p>
     <div id="simL" style="font-size:14px">比對中…</div>
     <div class="foot"><button id="simX">關閉</button><button class="pri" id="simS" disabled>存成自選分類</button></div>`, async (m, close) => {
     m.querySelector('#simX').onclick = close;
     m.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { close(); simModal(+b.dataset.n); });
     let R = [];
     try { R = await similar(N); } catch { m.querySelector('#simL').textContent = '讀取資料失敗，稍後再試'; return; }
-    m.querySelector('#simL').innerHTML = R.length ? `<div style="color:#93a3bf;font-size:12px;margin-bottom:4px">${CLOSES.asOf.slice(5).replace('-', '/')} 收盤資料｜共 ${R.length} 檔（相似度 0.75 以上，最多 30 檔）</div>` + R.map(x => `<a href="chart.html?s=${x.code}" data-go="${x.code}" style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #22314f;color:#e8eef8;text-decoration:none">
-      <span style="flex:1;min-width:0"><b>${WL.esc(x.name)}</b> <span style="color:#93a3bf;font-size:12px">${x.code} ${WL.esc(x.ind)}</span></span>${spark(x.c)}<b style="width:42px;text-align:right;color:#F0E442">${x.r.toFixed(2)}</b></a>`).join('') : '找不到相似度 0.75 以上的股票，試試別的天數';
+    m.querySelector('#simL').innerHTML = R.length ? `<div style="color:#8a7862;font-size:12px;margin-bottom:4px">${CLOSES.asOf.slice(5).replace('-', '/')} 收盤資料｜共 ${R.length} 檔（相似度 0.75 以上，最多 30 檔）</div>` + R.map(x => `<a href="chart.html?s=${x.code}" data-go="${x.code}" style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #f3e9d8;color:#2b2118;text-decoration:none">
+      <span style="flex:1;min-width:0"><b>${WL.esc(x.name)}</b> <span style="color:#8a7862;font-size:12px">${x.code} ${WL.esc(x.ind)}</span></span>${spark(x.c)}<b style="width:42px;text-align:right;color:#c28a12">${x.r.toFixed(2)}</b></a>`).join('') : '找不到相似度 0.75 以上的股票，試試別的天數';
     m.querySelectorAll('[data-go]').forEach(a => a.onclick = e => { e.preventDefault(); close(); show(a.dataset.go); });
     const sb = m.querySelector('#simS'); sb.disabled = !R.length;
     sb.onclick = () => {
@@ -343,7 +343,7 @@ const liveTick = async () => {
     const B = cur.bars, bar = [x.d, x.o ?? x.z, x.h ?? x.z, x.l ?? x.z, x.z, x.v ?? (B.at(-1)[0] === x.d ? B.at(-1)[5] : 0)];
     if (B.at(-1)[0] === x.d) B[B.length - 1] = bar; else if (B.at(-1)[0] < x.d) B.push(bar);
     await show(cur.id, true);
-    $('#live').innerHTML = ` <span style="color:#ff5a5a">●</span> 即時 ${RT.hhmmss(x.t)}`;
+    $('#live').innerHTML = ` <span style="color:#c81e1e">●</span> 即時 ${RT.hhmmss(x.t)}`;
   } catch {}
 };
 if (RT.on) { setInterval(liveTick, RT.every); document.addEventListener('visibilitychange', () => { if (!document.hidden) liveTick(); }); setTimeout(liveTick, 3000); }
