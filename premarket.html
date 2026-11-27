@@ -120,6 +120,17 @@ details.dd>summary{color:var(--blue);font-size:14px;cursor:pointer}
 .stk{border:1px solid #c9a56a;color:#a8772c;border-radius:6px;padding:0 5px;text-decoration:none;font-size:12px}
 .push{font-weight:700;min-width:22px;display:inline-block}
 .nmore{width:100%;margin-top:8px;background:#efe5d3;color:var(--blue);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px;cursor:pointer}
+/* iPad／電腦：滿版、兩欄 */
+@media (min-width:760px){
+  main{max-width:none;padding:14px 20px}
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;grid-auto-flow:row}
+}
+@media (min-width:1000px){
+  .grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  #app{columns:2;column-gap:16px}
+  #app>.sec{break-inside:avoid;display:inline-block;width:100%;vertical-align:top}
+  #app>:not(.sec){column-span:all}
+}
 </style>
 </head>
 <body>

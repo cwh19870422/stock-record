@@ -70,6 +70,12 @@ details.box[open]>summary::before{content:'▼ '}
 #wvOv b{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px #0008}
 #wvOv b.h{background:#e53935} #wvOv b.l{background:#22a052}
 .wvb.on{background:#c28a12;color:#fff;border-color:#c28a12;font-weight:700}
+/* iPad／電腦：滿版，圖表加高 */
+@media (min-width:760px){
+  main{max-width:none;padding:12px 20px}
+  #main{height:min(46vh,460px)}
+  .ip{height:190px} .ind{height:382px}
+}
 </style>
 </head>
 <body>
