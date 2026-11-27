@@ -100,6 +100,63 @@ async function worker() {
   }
 }
 await Promise.all(Array.from({ length: 5 }, worker));
+// ---------- 週K／月K：Yahoo 補長歷史，之後每天用日K重算最後幾根 ----------
+const LONG_MAX = +(process.env.LONG_MAX || 3000);
+const wkKey = d => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7); return ymd(t); };
+const moKey = d => d.slice(0, 7) + '-01';
+function aggK(daily, key) {
+  const out = [];
+  for (const b of daily) {
+    const k = key(b[0]), l = out.at(-1);
+    if (l && l[0] === k) { l[2] = Math.max(l[2], b[2]); l[3] = Math.min(l[3], b[3]); l[4] = b[4]; l[5] += b[5]; }
+    else out.push([k, b[1], b[2], b[3], b[4], b[5]]);
+  }
+  return out;
+}
+function mergeTail(long, daily, key, keep) {
+  const A = aggK(daily, key), m = new Map((long || []).map(b => [b[0], b]));
+  A.slice(long?.length ? -3 : 1).forEach(b => m.set(b[0], b)); // 日K 第一段可能不完整，有長資料時只覆蓋最後 3 根
+  return [...m.values()].sort((a, b) => a[0].localeCompare(b[0])).slice(-keep);
+}
+async function yahooLong(code, market, interval, range, key) {
+  const sym = `${code}.${market === '上櫃' ? 'TWO' : 'TW'}`;
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=${range}&interval=${interval}`, { headers: UA });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const res = (await r.json()).chart.result?.[0];
+  if (!res?.timestamp) return [];
+  const q = res.indicators.quote[0], off = res.meta.gmtoffset || 28800, m = new Map();
+  res.timestamp.forEach((t, i) => {
+    if ([q.open[i], q.high[i], q.low[i], q.close[i]].some(v => v == null)) return;
+    const k = key(ymd(new Date((t + off) * 1000)));
+    m.set(k, [k, r2(q.open[i]), r2(q.high[i]), r2(q.low[i]), r2(q.close[i]), Math.round((q.volume[i] || 0) / 1000)]);
+  });
+  return [...m.values()];
+}
+{
+  const codes = [...names.keys()].filter(c => fs.existsSync(`k/${c}.json`));
+  const lq = codes.filter(c => { const o = read(c); return o && (!o.w || !o.mo); }).slice(0, LONG_MAX);
+  let lf = 0, lx = 0;
+  const lw = async () => {
+    while (lq.length) {
+      const c = lq.shift(), o = read(c);
+      try {
+        o.w = await yahooLong(c, o.m, '1wk', '2y', wkKey);
+        await sleep(120);
+        o.mo = await yahooLong(c, o.m, '1mo', '8y', moKey);
+        write(o); lf++;
+      } catch { lx++; }
+      await sleep(120);
+    }
+  };
+  await Promise.all(Array.from({ length: 5 }, lw));
+  let lt = 0;
+  for (const c of codes) {
+    const o = read(c); if (!o?.w || !o.mo || !o.b?.length) continue;
+    const w = mergeTail(o.w, o.b, wkKey, 110), mo = mergeTail(o.mo, o.b, moKey, 100);
+    if (JSON.stringify(w) !== JSON.stringify(o.w) || JSON.stringify(mo) !== JSON.stringify(o.mo)) { o.w = w; o.mo = mo; write(o); lt++; }
+  }
+  say(`週／月K：補長歷史 ${lf} 檔（失敗 ${lx}）｜更新最後一根 ${lt} 檔`);
+}
 const list = [...names.values()].filter(x => fs.existsSync(`k/${x[0]}.json`)).sort((a, b) => a[0].localeCompare(b[0]));
 fs.writeFileSync('k/list.json', JSON.stringify(list));
 say(`新增當日K：${appended} 檔｜補歷史：${filled} 檔（失敗 ${failed}，尚待補 ${Math.max(0, need.length - MAX_BACKFILL)}）｜清單共 ${list.length} 檔`);

@@ -1,0 +1,37 @@
+name: 個股三大法人更新
+
+on:
+  schedule:
+    - cron: '50 9 * * 1-5'   # 台北 17:50（週一～五）
+    - cron: '30 11 * * 1-5'  # 台北 19:30 補跑
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pm/inst.mjs', '.github/workflows/inst.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inst
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 抓三大法人
+        run: node pm/inst.mjs
+      - name: 存檔
+        run: |
+          git config user.name "stock-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add k/f
+          git diff --cached --quiet && exit 0
+          git commit -qm "個股法人 $(TZ=Asia/Taipei date '+%F %H:%M')"
+          for i in 1 2 3 4; do git pull --rebase -q && git push && break; sleep 8; done
