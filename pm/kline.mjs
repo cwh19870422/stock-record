@@ -10,7 +10,7 @@ const log = [];
 const say = s => { console.log(s); log.push(s); };
 
 async function yahoo(sym) {
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1y&interval=1d`, { headers: UA });
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=3y&interval=1d`, { headers: UA });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const res = (await r.json()).chart.result[0], q = res.indicators.quote[0], off = res.meta.gmtoffset || 0;
   const bars = [];
@@ -26,7 +26,7 @@ async function yahoo(sym) {
 // 已有官方資料時只補最近 2 個月；證交所偶爾回傳 HTML（太頻繁），就等久一點再換網址重試
 async function twiiBars(prev) {
   const have = prev?.official ? prev.bars : [];
-  const months = have.length > 200 ? 1 : 12;
+  const months = have.length > 700 ? 1 : 36; // 不足 3 年就把 36 個月補齊
   const now = new Date(Date.now() + 8 * 3600e3);
   const roc = s => { const [y, m, d] = String(s).trim().split('/'); return `${+y + 1911}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; };
   const get = async paths => {
@@ -39,17 +39,22 @@ async function twiiBars(prev) {
   const m = new Map(have.map(b => [b[0], b]));
   for (let k = months; k >= 0; k--) {
     const ym = ymd(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1))).replace(/-/g, '');
-    const a = await get([`/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`, `/indicesReport/MI_5MINS_HIST?response=json&date=${ym}`]);
-    const v = await get([`/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`, `/exchangeReport/FMTQIK?response=json&date=${ym}`]);
+    let a, v;
+    try {
+      a = await get([`/rwd/zh/TAIEX/MI_5MINS_HIST?date=${ym}&response=json`, `/indicesReport/MI_5MINS_HIST?response=json&date=${ym}`]);
+      v = await get([`/rwd/zh/afterTrading/FMTQIK?date=${ym}&response=json`, `/exchangeReport/FMTQIK?response=json&date=${ym}`]);
+    } catch (e) { if (k === 0) throw e; say(`⚠️ 加權 ${ym}：${e.message}（下次再補）`); continue; } // 舊月份失敗就跳過，下次再補
     const amt = new Map((v.data || []).map(r => [roc(r[0]), Math.round(num(r[2]) / 1e8)]));
     (a.data || []).forEach(r => { const d = roc(r[0]), bar = [d, num(r[1]), num(r[2]), num(r[3]), num(r[4]), amt.get(d) || 0]; if (bar.slice(1, 5).every(x => x != null)) m.set(d, bar); });
   }
-  return [...m.values()].sort((x, y) => x[0].localeCompare(y[0])).slice(-300);
+  return [...m.values()].sort((x, y) => x[0].localeCompare(y[0])).slice(-800);
 }
-async function nightBars() {
-  const out = {};
+// 夜盤：沿用舊資料，不足 3 年時一次往回補 3 年（每段 28 天），之後只抓最近 2 段
+async function nightBars(prev) {
+  const out = Object.fromEntries((prev?.bars || []).map(b => [b[0], b]));
+  const segs = (prev?.bars?.length || 0) > 600 ? 1 : 39;
   const now = new Date(Date.now() + 8 * 3600e3);
-  for (let k = 4; k >= 0; k--) {
+  for (let k = segs; k >= 0; k--) {
     const end = new Date(now - k * 28 * 864e5), start = new Date(end - 27 * 864e5);
     const f = d => ymd(d).replace(/-/g, '/');
     const r = await fetch('https://www.taifex.com.tw/cht/3/futDataDown', {
@@ -66,7 +71,7 @@ async function nightBars() {
     });
     await new Promise(r => setTimeout(r, 1500));
   }
-  return Object.values(out).sort((a, b) => a[0].localeCompare(b[0]));
+  return Object.values(out).sort((a, b) => a[0].localeCompare(b[0])).slice(-800);
 }
 
 const data = readJSON('pm/data.json', {});
@@ -91,7 +96,7 @@ for (const [id, name, sym, group] of list) {
       bars = await twiiBars(old.items.find(x => x.id === 'TWII')).catch(e => { say('⚠️ 加權官方資料：' + e.message); return []; });
       official = bars.length >= 100;
       if (!official) { const keep = old.items.find(x => x.id === 'TWII' && x.official); bars = keep ? keep.bars : await yahoo(sym); official = !!keep; }
-    } else bars = sym ? await yahoo(sym) : await nightBars();
+    } else bars = sym ? await yahoo(sym) : await nightBars(old.items.find(x => x.id === 'TXN'));
     if (!bars.length) throw new Error('沒有資料');
     items.push({ id, name, group, bars, ...(official ? { official: true } : {}) });
     say(`${name}：${bars.length} 根，最新 ${bars.at(-1)[0]} 收 ${bars.at(-1)[4]}`);

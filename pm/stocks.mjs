@@ -1,10 +1,10 @@
-// 全部個股 K 線資料庫：k/{代號}.json（近 300 根日K）＋ k/list.json（搜尋清單）
+// 全部個股 K 線資料庫：k/{代號}.json（近 3 年日K，約 760 根）＋ k/list.json（搜尋清單）
 // 每天收盤後：證交所 MI_INDEX（上市）＋櫃買 OpenAPI（上櫃）補上當天一根；沒有歷史的股票用 Yahoo 補一年
 import fs from 'node:fs';
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (stock-record stocks)' };
 const MAX_BACKFILL = +(process.env.MAX_BACKFILL || 3000);
-const KEEP = 300;
+const KEEP = 760; // 約 3 年交易日
 const num = x => { const v = parseFloat(String(x ?? '').replace(/[,\s]/g, '')); return Number.isFinite(v) ? v : null; };
 const r2 = x => Math.round(x * 100) / 100;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -52,7 +52,7 @@ async function tpexDay() {
 // ---------- 2. Yahoo 補一年歷史 ----------
 async function yahoo(code, market) {
   const sym = `${code}.${market === '上櫃' ? 'TWO' : 'TW'}`;
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=15mo&interval=1d`, { headers: UA });
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=3y&interval=1d`, { headers: UA });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const res = (await r.json()).chart.result?.[0];
   if (!res?.timestamp) throw new Error('沒有資料');
@@ -94,7 +94,7 @@ async function worker() {
       let b = await yahoo(x.c, x.m);
       const valid = x.bar.slice(1, 5).every(v => v != null && v > 0);
       if (valid) { b = b.filter(r => r[0] !== x.bar[0]); b.push(x.bar); b.sort((a, c) => a[0].localeCompare(c[0])); }
-      if (b.length) { write({ c: x.c, n: x.n, m: x.m, b: b.slice(-KEEP) }); filled++; } else failed++;
+      if (b.length) { write({ c: x.c, n: x.n, m: x.m, b: b.slice(-KEEP), d3: 1 }); filled++; } else failed++;
     } catch { failed++; }
     await sleep(150);
   }
@@ -134,15 +134,21 @@ async function yahooLong(code, market, interval, range, key) {
 }
 {
   const codes = [...names.keys()].filter(c => fs.existsSync(`k/${c}.json`));
-  const lq = codes.filter(c => { const o = read(c); return o && (!o.w || !o.mo); }).slice(0, LONG_MAX);
+  // 日K 補到 3 年（d3）、週K 補到 3 年（w3）：舊檔只有 1 年，一次性用 Yahoo 補齊；交易所當天的那根優先保留
+  const lq = codes.filter(c => { const o = read(c); return o && (!o.w || !o.mo || !o.d3 || !o.w3); }).slice(0, LONG_MAX);
   let lf = 0, lx = 0;
   const lw = async () => {
     while (lq.length) {
       const c = lq.shift(), o = read(c);
       try {
-        o.w = await yahooLong(c, o.m, '1wk', '2y', wkKey);
-        await sleep(120);
-        o.mo = await yahooLong(c, o.m, '1mo', '8y', moKey);
+        if (!o.d3) {
+          const y = await yahoo(c, o.m), m = new Map(y.map(b => [b[0], b]));
+          (o.b || []).forEach(b => m.set(b[0], b));
+          o.b = [...m.values()].sort((a, b) => a[0].localeCompare(b[0])).slice(-KEEP); o.d3 = 1;
+          await sleep(120);
+        }
+        if (!o.w || !o.w3) { o.w = await yahooLong(c, o.m, '1wk', '3y', wkKey); o.w3 = 1; await sleep(120); }
+        if (!o.mo) o.mo = await yahooLong(c, o.m, '1mo', '8y', moKey);
         write(o); lf++;
       } catch { lx++; }
       await sleep(120);
@@ -152,7 +158,7 @@ async function yahooLong(code, market, interval, range, key) {
   let lt = 0;
   for (const c of codes) {
     const o = read(c); if (!o?.w || !o.mo || !o.b?.length) continue;
-    const w = mergeTail(o.w, o.b, wkKey, 110), mo = mergeTail(o.mo, o.b, moKey, 100);
+    const w = mergeTail(o.w, o.b, wkKey, 160), mo = mergeTail(o.mo, o.b, moKey, 100);
     if (JSON.stringify(w) !== JSON.stringify(o.w) || JSON.stringify(mo) !== JSON.stringify(o.mo)) { o.w = w; o.mo = mo; write(o); lt++; }
   }
   say(`週／月K：補長歷史 ${lf} 檔（失敗 ${lx}）｜更新最後一根 ${lt} 檔`);
