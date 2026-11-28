@@ -64,7 +64,7 @@ textarea{min-height:64px;resize:vertical}
 .item .why .miss{color:#b5651d;font-weight:600}
 .cpl{display:flex;justify-content:space-between;gap:10px;margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
 .cpl span{display:block;font-size:12px;color:var(--sub)}.cpl b{font-size:22px;font-weight:700;white-space:nowrap}
-.cpl.c3{align-items:flex-end}.cpl.c3 i{font-style:normal;color:var(--sub);font-size:16px;padding-bottom:4px}.cpl.c3 b{font-size:20px}
+.cpl.c3{align-items:flex-end}.cpl .rq{font-size:15px;color:var(--accent);font-weight:700}.cpl.c3 i{font-style:normal;color:var(--sub);font-size:16px;padding-bottom:4px}.cpl.c3 b{font-size:20px}
 .mktt{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px}.mkt+.mkt{margin-top:6px}
 .chip.edit{padding-right:6px}.chip.edit .x{display:inline-block;margin-left:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#f1d3cc;color:var(--up);font-size:12px}
 .lblrow{display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px}.lblrow label.f{margin:0}
@@ -750,7 +750,7 @@ function realPx(r){
   const sh=r.matches.reduce((a,m)=>a+m.shares,0)||1,bp=r.matches.reduce((a,m)=>a+m.buy.price*m.shares,0)/sh;
   const multi=new Set(r.matches.map(m=>m.buy.price)).size>1;
   return `<div class="cpl c3"><div><span>${multi?'買進均價':'買進價'}</span><b>${fmtP(+bp.toFixed(2))}</b></div><i>→</i>
-    <div><span>賣出價</span><b>${fmtP(r.sell.price)}</b></div>
+    <div><span>賣出價</span><b>${fmtP(r.sell.price)} <small class="rq">× ${qtyTxt(r.sell.shares)}</small></b></div>
     <div style="text-align:right"><span>損益 ${r.pct.toFixed(2)}%</span><b class="${cls(r.pl)}">${sgn(r.pl)}</b></div></div>`;
 }
 // 已實現卡片的當日盤勢：各買進日＋賣出日（同一天就合併）
@@ -878,7 +878,7 @@ function renderView(){
         <div class="acts"><button onclick="openEdit('b','${l.buy.id}')">✎ 修改</button><button onclick="askDel('b','${l.buy.id}')">刪除</button></div></div>`}).join('')}</div></div>`).join(''):'<div class="empty">沒有符合的持股</div>';
   }else if(view==='real'){
     V.innerHTML=R.length?[...R].reverse().map(r=>`<div class="item">
-      <div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}${holdDays(r)}</div><div class="meta">${dt(r.sell.date)} 賣・${qtyTxt(r.sell.shares)}${r.sell.daytrade?'・當沖':''}</div>
+      <div class="nm">${r.sell.code} ${esc(info(r.sell.code).name)}${holdDays(r)}</div><div class="meta">${dt(r.sell.date)} 賣${r.sell.daytrade?'・當沖':''}</div>
       ${realPx(r)}
       ${whyHtml(r)}
       ${realMkt(r)}
