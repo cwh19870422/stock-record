@@ -151,14 +151,14 @@ const base = {
   layout: { background: { color: 'transparent' }, textColor: '#8a7862', fontSize: 11 },
   grid: { vertLines: { color: '#ece1cd' }, horzLines: { color: '#ece1cd' } },
   rightPriceScale: { borderColor: '#e2d4bc', minimumWidth: 64 },
-  timeScale: { borderColor: '#e2d4bc', rightOffset: 3 },
+  timeScale: { borderColor: '#e2d4bc', rightOffset: 0, fixRightEdge: true },
   crosshair: { mode: 0 },
   handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
   localization: { locale: 'zh-TW', dateFormat: 'yyyy/MM/dd' },
 };
 const charts = [], S = {};
 function mk(id, extra = {}) { const c = LightweightCharts.createChart($(id), { ...base, ...extra }); charts.push(c); return c; }
-const sub = { layout: { ...base.layout, attributionLogo: false }, timeScale: { visible: false }, handleScroll: { ...base.handleScroll, mouseWheel: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .12, bottom: .06 } } };
+const sub = { layout: { ...base.layout, attributionLogo: false }, timeScale: { visible: false, rightOffset: 0, fixRightEdge: true }, handleScroll: { ...base.handleScroll, mouseWheel: false }, rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .12, bottom: .06 } } };
 const cMain = mk('#main', { rightPriceScale: { ...base.rightPriceScale, scaleMargins: { top: .08, bottom: .06 } } });
 const C_ = {};
 ['vol', 'kd', 'md', 'fi', 'it', 'dl'].forEach(k => C_[k] = mk('#c-' + k, sub));
@@ -330,7 +330,7 @@ async function show(id, keep = false, perChange = false) {
   const naTxt = it.group !== 'stock' ? '只有個股有三大法人資料' : F ? '' : '法人資料建立中，每天收盤後更新';
   ['fi', 'it', 'dl'].forEach(k => na(k, naTxt));
   const n = B.length, show0 = { d: 90, w: 80, m: 60 }[PER], from = Math.max(0, n - show0);
-  if (!keep || perChange || changed) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n + 2 }));
+  if (!keep || perChange || changed) charts.forEach(c => c.timeScale().setVisibleLogicalRange({ from, to: n - 1 }));
 
   const i = n - 1, ch = C[i] - C[i - 1], p = ch / C[i - 1] * 100, cl = ch >= 0 ? 'up' : 'dn';
   $('#name').textContent = it.name; drawStar();

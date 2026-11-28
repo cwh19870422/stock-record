@@ -760,7 +760,7 @@ function realMkt(r){
   const sd=r.sell.date.slice(0,10);
   if(days[sd]){days[sd].k='買賣日';days[sd].mk.push({k:'s',date:r.sell.date,price:r.sell.price});days[sd].o=r.sell}
   else days[sd]={o:r.sell,k:'賣出日',mk:[{k:'s',date:r.sell.date,price:r.sell.price}]};
-  return Object.keys(days).sort().map(d=>{const x=days[d],seen=new Set();x.mk=x.mk.filter(m=>{const k=m.date+m.price;return !seen.has(k)&&seen.add(k)});return mktHtml(x.o,x.k,x.mk)}).join('');
+  return Object.keys(days).sort().map(d=>{const x=days[d],seen=new Set();x.mk=x.mk.filter(m=>{const k=m.date+m.price;return !seen.has(k)&&seen.add(k)});return mktHtml(x.o,x.k,x.mk,true)}).join('');
 }
 const missTxt=o=>[missS(o.bmiss),missS(o.smiss)];
 function pickSell(code){
@@ -801,7 +801,7 @@ function saveSell(){
 
 // ================= 大盤＋新聞 =================
 // o：該筆買或賣；lbl：標題（例如「買進日」）；marks：要標在個股走勢上的買賣點 [{k:'b'|'s',date,price}]
-function mktHtml(o,lbl,marks){
+function mktHtml(o,lbl,marks,noNews){
   const d=o.date.slice(0,10),m=MKT[d],sn=AUTO['news_'+d+'_'+o.code]||[],mn=AUTO['news_'+d+'_MKT']||[];
   const L=(lbl||'當日')+(lbl?' '+d.slice(5).replace('-','/')+' ':'')+'大盤';
   let top;
@@ -813,7 +813,7 @@ function mktHtml(o,lbl,marks){
   top=top.replace('當日大盤',L);
   const tk=`<div class="mktt">${top}</div>`;
   const note=o.mktNote?`<div style="margin-top:4px">📝 ${esc(o.mktNote)}</div>`:'';
-  const n=sn.length+mn.length;
+  const n=noNews?0:sn.length+mn.length;
   const list=a=>a.map(x=>`<a href="${esc(x.u)}" target="_blank" rel="noopener">📰 ${esc(x.t)} <small>${esc(x.s)}</small></a>`).join('');
   const news=n?`<div class="expand" data-k="N${esc(o.id)}_${d}" onclick="tog(this)">▾ 當日新聞（${n}）</div><div class="news" style="display:none">${sn.length?`<div class="hd">${esc(info(o.code).name)}</div>${list(sn)}`:''}${mn.length?`<div class="hd">大盤</div>${list(mn)}`:''}</div>`:'';
   return `<div class="mkt">${tk}${note}${news}</div>`;
